@@ -1,0 +1,122 @@
+.attendant-main .metrics-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.attendant-rate {
+  grid-column: span 2;
+}
+
+.goals-grid {
+  display: grid;
+  gap: 14px;
+  margin-bottom: 18px;
+}
+
+.attendant-main #page-dashboard .goals-grid {
+  grid-column: 1 / -1;
+}
+
+.goals-grid.is-hidden {
+  display: none;
+}
+
+.goal-panel {
+  display: grid;
+  gap: 14px;
+}
+
+.goal-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.goal-head p {
+  margin-top: 4px;
+  color: var(--muted);
+}
+
+.goal-track {
+  height: 18px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(158, 237, 109, 0.12);
+}
+
+.goal-fill {
+  width: var(--goal-progress);
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #9eed6d, #d4ff90);
+}
+
+.goal-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--muted);
+  font-size: var(--text-md);
+}
+
+.goal-remaining {
+  color: var(--text);
+  font-size: var(--text-md);
+  font-weight: var(--weight-semibold);
+}
+
+.goal-panel.is-complete .goal-remaining {
+  color: var(--accent);
+}
+
+.goal-complete {
+  display: none;
+  padding: 14px 16px;
+  border: 1px solid rgba(159, 232, 112, 0.32);
+  border-radius: var(--radius);
+  background: rgba(159, 232, 112, 0.08);
+  color: var(--text);
+}
+
+.goal-panel.is-complete .goal-complete {
+  display: block;
+}
+
+.goal-panel.is-hidden {
+  display: none;
+}
+
+.attendant-chart-panel {
+  margin-top: 18px;
+}
+
+.attendant-bottom-nav {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.notification-simple {
+  margin-top: 16px;
+}
+
+@media (max-width: 1120px) {
+  .attendant-main .metrics-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 720px) {
+  .attendant-main .metrics-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .attendant-rate {
+    grid-column: auto;
+  }
+
+  .attendant-main #page-transactions th:nth-child(4),
+  .attendant-main #page-transactions td:nth-child(4),
+  .attendant-main #page-transactions th:nth-child(5),
+  .attendant-main #page-transactions td:nth-child(5) {
+    display: table-cell;
+  }
+}

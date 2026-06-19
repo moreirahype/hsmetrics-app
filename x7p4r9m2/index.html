@@ -1,0 +1,259 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#0e120d">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <meta name="apple-mobile-web-app-title" content="Home Studio BI">
+    <title>Home Studio BI</title>
+    <link rel="manifest" href="../manifest.webmanifest?v=55">
+    <link rel="apple-touch-icon" href="../assets/apple-touch-icon.png?v=55">
+    <link rel="apple-touch-icon" sizes="180x180" href="../assets/apple-touch-icon.png?v=55">
+    <link rel="apple-touch-icon" sizes="192x192" href="../assets/icon-192.png?v=55">
+    <link rel="apple-touch-icon" sizes="512x512" href="../assets/icon-512.png?v=55">
+    <link rel="icon" href="../assets/icon-192.png?v=55" type="image/png">
+    <link rel="stylesheet" href="../styles.css?v=55">
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar" aria-label="Navegação principal">
+        <a class="brand" href="#dashboard" aria-label="Home Studio BI">
+          <span class="brand-mark" aria-hidden="true">
+            <img src="../assets/icon-192.png?v=55" alt="">
+          </span>
+          <span>Home Studio BI</span>
+        </a>
+        <button class="sidebar-toggle" id="sidebarToggle" type="button" aria-label="Recolher barra lateral" aria-expanded="true" title="Recolher barra lateral">
+          <span aria-hidden="true"></span>
+        </button>
+        <nav class="side-nav">
+          <button class="nav-item is-active" data-page="dashboard" type="button" aria-label="Dashboard">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z"></path></svg>
+            <span>Dashboard</span>
+          </button>
+          <button class="nav-item" data-page="attendants" type="button" aria-label="Atendentes">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zm-7 8a7 7 0 0 1 14 0z"></path></svg>
+            <span>Atendentes</span>
+          </button>
+          <button class="nav-item" data-page="transactions" type="button" aria-label="Transações">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 6h14v2H5zm0 5h14v2H5zm0 5h14v2H5z"></path></svg>
+            <span>Transações</span>
+          </button>
+          <button class="nav-item" data-page="notifications" type="button" aria-label="Notificações">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 22a2.5 2.5 0 0 0 2.45-2h-4.9A2.5 2.5 0 0 0 12 22zm7-5-2-2v-5a5 5 0 0 0-10 0v5l-2 2v1h14z"></path></svg>
+            <span>Notificações</span>
+          </button>
+        </nav>
+      </aside>
+
+      <main class="main">
+        <header class="mobile-header">
+          <a class="brand" href="#dashboard" aria-label="Home Studio BI">
+            <span class="brand-mark" aria-hidden="true">
+              <img src="../assets/icon-192.png?v=55" alt="">
+            </span>
+            <span>Home Studio BI</span>
+          </a>
+          <span class="sync-pill" id="syncStatus">Carregando</span>
+        </header>
+
+        <div class="desktop-sync">
+          <span class="sync-pill" id="desktopSyncStatus">Carregando</span>
+        </div>
+
+        <section class="control-panel" aria-label="Filtros">
+          <div class="period-grid" role="group" aria-label="Período">
+            <button class="period-button is-active" data-period="today" type="button">Hoje</button>
+            <button class="period-button" data-period="yesterday" type="button">Ontem</button>
+            <button class="period-button" data-period="last7" type="button">Últimos 7 dias</button>
+            <button class="period-button" data-period="month" type="button">Este mês</button>
+            <button class="period-button" data-period="lastMonth" type="button">Mês passado</button>
+            <button class="period-button" data-period="custom" type="button">Personalizado</button>
+          </div>
+          <div class="custom-fields" id="customFields">
+            <label>
+              <span>Início</span>
+              <input id="startDate" type="date">
+            </label>
+            <label>
+              <span>Fim</span>
+              <input id="endDate" type="date">
+            </label>
+          </div>
+          <button class="refresh-button" id="refreshButton" type="button">Atualizar</button>
+        </section>
+
+        <section class="page is-active" id="page-dashboard" data-page="dashboard">
+          <div class="metrics-grid">
+            <article class="metric metric-revenue">
+              <span>Faturamento</span>
+              <strong id="metricRevenue">R$ 0,00</strong>
+            </article>
+            <article class="metric metric-ads">
+              <span>Gastos com anúncios</span>
+              <strong id="metricAds">R$ 0,00</strong>
+            </article>
+            <article class="metric metric-tax">
+              <span>Imposto Meta Ads</span>
+              <strong id="metricTax">R$ 0,00</strong>
+            </article>
+            <article class="metric metric-profit">
+              <span>Lucro</span>
+              <strong id="metricProfit">R$ 0,00</strong>
+            </article>
+            <article class="metric metric-margin">
+              <span>Margem</span>
+              <strong id="metricMargin">N/A</strong>
+            </article>
+            <article class="metric metric-roas">
+              <span>ROAS</span>
+              <strong id="metricRoas">0,00</strong>
+            </article>
+            <article class="metric metric-sales">
+              <span>Vendas</span>
+              <strong id="metricSales">0</strong>
+            </article>
+            <article class="metric metric-cpa">
+              <span>CPA</span>
+              <strong id="metricCpa">N/A</strong>
+            </article>
+            <article class="metric metric-average-ticket">
+              <span>Ticket médio</span>
+              <strong id="metricAverageTicket">N/A</strong>
+            </article>
+            <article class="metric metric-leads">
+              <span>Leads</span>
+              <strong id="metricLeads">0</strong>
+            </article>
+            <article class="metric metric-cpl">
+              <span>Custo por Lead</span>
+              <strong id="metricCpl">N/A</strong>
+            </article>
+            <article class="metric metric-conversion-rate">
+              <span>Taxa de conversão</span>
+              <strong id="metricConversionRate">N/A</strong>
+            </article>
+          </div>
+
+          <article class="panel chart-panel">
+            <div class="panel-header">
+              <h1>Vendas por horário</h1>
+              <span class="period-label" id="hourlySalesChartPeriod">Hoje</span>
+            </div>
+            <div class="line-chart-wrap">
+              <svg class="line-chart" id="hourlySalesChart" viewBox="0 0 1000 280" preserveAspectRatio="xMidYMid meet" aria-label="Gráfico de vendas por horário"></svg>
+              <div class="chart-tooltip" id="hourlySalesChartTooltip" hidden></div>
+            </div>
+          </article>
+
+          <article class="panel chart-panel">
+            <div class="panel-header">
+              <h1>Vendas por dia</h1>
+              <span class="period-label" id="dailySalesChartPeriod">Hoje</span>
+            </div>
+            <div class="line-chart-wrap">
+              <svg class="line-chart" id="dailySalesChart" viewBox="0 0 1000 280" preserveAspectRatio="xMidYMid meet" aria-label="Gráfico de vendas por dia"></svg>
+              <div class="chart-tooltip" id="dailySalesChartTooltip" hidden></div>
+            </div>
+          </article>
+        </section>
+
+        <section class="page" id="page-attendants" data-page="attendants">
+          <article class="panel attendants-panel">
+            <div class="panel-header">
+              <h1>Desempenho por atendente</h1>
+              <span class="period-label" id="attendantsPeriod">Hoje</span>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Atendente</th>
+                    <th>Vendas</th>
+                    <th><span class="desktop-label">Faturamento</span><span class="mobile-label">Fat.</span></th>
+                    <th><span class="desktop-label">Ticket médio</span><span class="mobile-label">Ticket</span></th>
+                  </tr>
+                </thead>
+                <tbody id="attendantsBody"></tbody>
+              </table>
+            </div>
+            <div class="empty-state" id="attendantsEmpty">Nenhuma venda atribuída.</div>
+            <div class="bar-chart" id="attendantsChart" aria-label="Comparativo de desempenho"></div>
+          </article>
+        </section>
+
+        <section class="page" id="page-transactions" data-page="transactions">
+          <article class="panel transactions-panel">
+            <div class="transactions-head">
+              <h1>Transações</h1>
+              <input id="transactionSearch" type="search" placeholder="Buscar por pagador, atendente ou valor" aria-label="Buscar transações">
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Data</th>
+                    <th>Hora</th>
+                    <th>Pagador</th>
+                    <th>Atendente</th>
+                    <th>Moeda</th>
+                    <th>Valor</th>
+                  </tr>
+                </thead>
+                <tbody id="transactionsBody"></tbody>
+              </table>
+            </div>
+            <div class="pager">
+              <button id="prevPage" type="button">Anterior</button>
+              <span id="pageInfo">Página 1 de 1</span>
+              <button id="nextPage" type="button">Próxima</button>
+            </div>
+          </article>
+        </section>
+
+        <section class="page" id="page-notifications" data-page="notifications">
+          <article class="panel notifications-panel">
+            <h1>Notificações</h1>
+            <div class="summary-card">
+              <strong>Resumo das Campanhas!</strong>
+              <p id="notificationSummary">Seu investimento está em R$ 0,00, com faturamento em R$ 0,00, com um CPA de N/A e um ROI de 0,00.</p>
+            </div>
+            <div class="notification-actions">
+              <h2>Horários</h2>
+              <button id="enableAllNotifications" type="button">Ativar todos</button>
+            </div>
+            <div class="notification-list" id="notificationList"></div>
+            <button class="test-notification" id="testNotification" type="button">Testar notificação</button>
+          </article>
+        </section>
+      </main>
+
+      <nav class="bottom-nav" aria-label="Navegação mobile">
+        <button class="bottom-item is-active" data-page="dashboard" type="button" aria-label="Dashboard">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z"></path></svg>
+          <span>Dashboard</span>
+        </button>
+        <button class="bottom-item" data-page="attendants" type="button" aria-label="Atendentes">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zm-7 8a7 7 0 0 1 14 0z"></path></svg>
+          <span>Atendentes</span>
+        </button>
+        <button class="bottom-item" data-page="transactions" type="button" aria-label="Transações">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 6h14v2H5zm0 5h14v2H5zm0 5h14v2H5z"></path></svg>
+          <span>Transações</span>
+        </button>
+        <button class="bottom-item" data-page="notifications" type="button" aria-label="Notificações">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 22a2.5 2.5 0 0 0 2.45-2h-4.9A2.5 2.5 0 0 0 12 22zm7-5-2-2v-5a5 5 0 0 0-10 0v5l-2 2v1h14z"></path></svg>
+          <span>Notificações</span>
+        </button>
+      </nav>
+    </div>
+    <script src="../config.js?v=55"></script>
+    <script src="../push-client.js?v=55"></script>
+    <script src="../app.js?v=55"></script>
+  </body>
+</html>
+
+
+
