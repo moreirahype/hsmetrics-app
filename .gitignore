@@ -1,3 +1,6 @@
-﻿.DS_Store
+.DS_Store
 Thumbs.db
 config.local.js
+
+.env.local
+.env*.local
