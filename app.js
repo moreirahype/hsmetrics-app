@@ -148,6 +148,7 @@
     bindEvents();
     setPage(location.hash.replace("#", "") || "dashboard");
     renderNotifications();
+    render();
     registerServiceWorker();
     refreshData();
     window.setInterval(() => refreshData(), config.autoRefreshMinutes * 60 * 1000);
@@ -2036,15 +2037,18 @@
     }
     list.innerHTML = goals.map((goal) => `
       <div class="settings-table-row settings-goal-row" data-settings-draft-key="goal:${escapeHtml(`${goal.slug || ""}:${goal.title || ""}`)}">
-        <input data-goal-field="slug" value="${escapeHtml(goal.slug || "")}" aria-label="Atendente">
-        <input data-goal-field="title" value="${escapeHtml(goal.title)}" aria-label="Meta">
-        <input data-goal-field="value" value="${escapeHtml(decimal(goal.value || 0))}" inputmode="decimal" aria-label="Valor">
-        <input data-goal-field="prize" value="${escapeHtml(goal.prize || "")}" aria-label="Prêmio">
-        <select data-goal-field="active" aria-label="Status">
+        <input data-goal-field="slug" value="${escapeHtml(goal.slug || "")}" aria-label="Atendente" readonly>
+        <input data-goal-field="title" value="${escapeHtml(goal.title)}" aria-label="Meta" readonly>
+        <input data-goal-field="value" value="${escapeHtml(decimal(goal.value || 0))}" inputmode="decimal" aria-label="Valor" readonly>
+        <input data-goal-field="prize" value="${escapeHtml(goal.prize || "")}" aria-label="Prêmio" readonly>
+        <select data-goal-field="active" aria-label="Status" disabled>
           <option value="TRUE" ${goal.active ? "selected" : ""}>Ativa</option>
           <option value="FALSE" ${!goal.active ? "selected" : ""}>Inativa</option>
         </select>
         <div class="settings-row-actions">
+          <button class="settings-row-edit-button" type="button" aria-label="Editar meta ${escapeHtml(goal.title)}">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 17.25V20h2.75L17.81 8.94l-2.75-2.75L4 17.25Zm15.71-10.04a1 1 0 0 0 0-1.41L18.2 4.29a1 1 0 0 0-1.41 0l-1.02 1.02 2.75 2.75 1.19-1.19Z"></path></svg>
+          </button>
           <button class="settings-save-button" type="button" data-settings-edit="goal" data-slug="${escapeHtml(goal.slug || "")}" data-title="${escapeHtml(goal.title)}" data-value="${escapeHtml(String(goal.value || 0))}" data-prize="${escapeHtml(goal.prize || "")}" data-active="${goal.active ? "true" : "false"}">Salvar</button>
           <button class="settings-delete-button" type="button" data-settings-delete="goal" data-slug="${escapeHtml(goal.slug || "")}" data-title="${escapeHtml(goal.title)}" aria-label="Excluir meta ${escapeHtml(goal.title)}">Apagar</button>
         </div>
@@ -2074,29 +2078,22 @@
       const isFront = product.front || state.frontProducts.includes(key);
       return `
         <div class="settings-table-row settings-product-row" data-settings-draft-key="product:${escapeHtml(product.name)}">
-          <input data-product-field="name" value="${escapeHtml(product.name)}" readonly aria-label="Produto">
-          <input data-product-field="fixed" value="${escapeHtml(decimal(product.fixed || 0))}" inputmode="decimal" aria-label="Custo fixo">
-          <input data-product-field="percent" value="${escapeHtml(decimal(product.percent || 0))}" inputmode="decimal" aria-label="Custo percentual">
-          <select data-front-toggle value="${escapeHtml(key)}" aria-label="Produto de front">
+          <input data-product-field="name" data-locked-field value="${escapeHtml(product.name)}" readonly aria-label="Produto">
+          <input data-product-field="fixed" value="${escapeHtml(decimal(product.fixed || 0))}" inputmode="decimal" aria-label="Custo fixo" readonly>
+          <input data-product-field="percent" value="${escapeHtml(decimal(product.percent || 0))}" inputmode="decimal" aria-label="Custo percentual" readonly>
+          <select data-front-toggle value="${escapeHtml(key)}" aria-label="Produto de front" disabled>
             <option value="yes" ${isFront ? "selected" : ""}>Sim</option>
             <option value="no" ${!isFront ? "selected" : ""}>Não</option>
           </select>
           <div class="settings-row-actions">
+            <button class="settings-row-edit-button" type="button" aria-label="Editar produto ${escapeHtml(product.name)}">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 17.25V20h2.75L17.81 8.94l-2.75-2.75L4 17.25Zm15.71-10.04a1 1 0 0 0 0-1.41L18.2 4.29a1 1 0 0 0-1.41 0l-1.02 1.02 2.75 2.75 1.19-1.19Z"></path></svg>
+            </button>
             <button class="settings-save-button" type="button" data-settings-edit="product" data-name="${escapeHtml(product.name)}" data-fixed="${escapeHtml(String(product.fixed || 0))}" data-percent="${escapeHtml(String(product.percent || 0))}" data-front="${isFront ? "true" : "false"}">Salvar</button>
             <button class="settings-delete-button" type="button" data-settings-delete="product" data-name="${escapeHtml(product.name)}" aria-label="Excluir produto ${escapeHtml(product.name)}">Apagar</button>
           </div>
         </div>`;
     }).join("");
-    els.frontProductsList.querySelectorAll("select[data-front-toggle]").forEach((input) => {
-      input.addEventListener("change", () => {
-        state.frontProducts = Array.from(els.frontProductsList.querySelectorAll("select[data-front-toggle]"))
-          .filter((node) => node.value === "yes")
-          .map((node) => normalizeFilterValue(node.closest(".settings-product-row").querySelector("[data-product-field='name']").value));
-        saveStringList("hsbi-front-products", state.frontProducts);
-        state.animateDashboard = state.page === "dashboard";
-        render();
-      });
-    });
   }
 
   function renderManualSalePermissionSettings() {
@@ -2111,29 +2108,24 @@
       const key = normalizeFilterValue(attendant.name);
       return `
         <div class="settings-table-row settings-attendant-row" data-settings-draft-key="attendant:${escapeHtml(attendant.slug || attendant.name)}">
-          <input data-attendant-field="name" value="${escapeHtml(attendant.name)}" aria-label="Nome">
-          <input data-attendant-field="commission" value="${escapeHtml(decimal(attendant.commission || 0))}" inputmode="decimal" aria-label="Comissão">
-          <input data-attendant-field="salary" value="${escapeHtml(decimal(attendant.salary || 0))}" inputmode="decimal" aria-label="Fixo mensal">
-          <input data-attendant-field="start" value="${escapeHtml(attendant.start || "")}" placeholder="aaaa-mm-dd" aria-label="Início">
-          <input data-attendant-field="pauses" value="${escapeHtml(attendant.pauses || "")}" placeholder="Sem pausas" aria-label="Pausas">
-          <select data-manual-toggle aria-label="Permitir lançamento manual">
+          <input data-attendant-field="name" value="${escapeHtml(attendant.name)}" aria-label="Nome" readonly>
+          <input data-attendant-field="commission" value="${escapeHtml(decimal(attendant.commission || 0))}" inputmode="decimal" aria-label="Comissão" readonly>
+          <input data-attendant-field="salary" value="${escapeHtml(decimal(attendant.salary || 0))}" inputmode="decimal" aria-label="Fixo mensal" readonly>
+          <input data-attendant-field="start" value="${escapeHtml(attendant.start || "")}" placeholder="aaaa-mm-dd" aria-label="Início" readonly>
+          <input data-attendant-field="pauses" value="${escapeHtml(attendant.pauses || "")}" placeholder="Sem pausas" aria-label="Pausas" readonly>
+          <select data-manual-toggle aria-label="Permitir lançamento manual" disabled>
             <option value="yes" ${state.manualSalePermissions.includes(key) ? "selected" : ""}>Sim</option>
             <option value="no" ${!state.manualSalePermissions.includes(key) ? "selected" : ""}>Não</option>
           </select>
           <div class="settings-row-actions">
+            <button class="settings-row-edit-button" type="button" aria-label="Editar atendente ${escapeHtml(attendant.name)}">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 17.25V20h2.75L17.81 8.94l-2.75-2.75L4 17.25Zm15.71-10.04a1 1 0 0 0 0-1.41L18.2 4.29a1 1 0 0 0-1.41 0l-1.02 1.02 2.75 2.75 1.19-1.19Z"></path></svg>
+            </button>
             <button class="settings-save-button" type="button" data-settings-edit="attendant" data-slug="${escapeHtml(attendant.slug || "")}" data-name="${escapeHtml(attendant.name)}" data-commission="${escapeHtml(String(attendant.commission || 0))}" data-salary="${escapeHtml(String(attendant.salary || 0))}" data-start="${escapeHtml(attendant.start || "")}" data-pauses="${escapeHtml(attendant.pauses || "")}">Salvar</button>
             <button class="settings-delete-button" type="button" data-settings-delete="attendant" data-slug="${escapeHtml(attendant.slug || "")}" data-name="${escapeHtml(attendant.name)}" aria-label="Excluir atendente ${escapeHtml(attendant.name)}">Apagar</button>
           </div>
         </div>`;
     }).join("");
-    els.manualSaleAttendantsList.querySelectorAll("select[data-manual-toggle]").forEach((input) => {
-      input.addEventListener("change", () => {
-        state.manualSalePermissions = Array.from(els.manualSaleAttendantsList.querySelectorAll("select[data-manual-toggle]"))
-          .filter((node) => node.value === "yes")
-          .map((node) => normalizeFilterValue(node.closest(".settings-attendant-row").querySelector("[data-attendant-field='name']").value));
-        saveStringList("hsbi-manual-sale-attendants", state.manualSalePermissions);
-      });
-    });
     bindSettingsMirrorEditButtons();
   }
 
@@ -2171,7 +2163,25 @@
     document.querySelectorAll(".settings-table-row").forEach((row) => {
       if (row.dataset.draftEventsBound === "1") return;
       row.dataset.draftEventsBound = "1";
+      const editButton = row.querySelector(".settings-row-edit-button");
+      if (editButton) {
+        editButton.addEventListener("click", () => {
+          const isEditing = row.classList.toggle("is-editing");
+          row.querySelectorAll("input").forEach((input) => {
+            if (!input.hasAttribute("data-locked-field")) input.readOnly = !isEditing;
+          });
+          row.querySelectorAll("select").forEach((select) => {
+            select.disabled = !isEditing;
+            enhanceSelect(select);
+          });
+          if (isEditing) {
+            const firstField = row.querySelector("input:not([data-locked-field]), select");
+            if (firstField) firstField.focus();
+          }
+        });
+      }
       row.querySelectorAll("input, select").forEach((field) => {
+        field.addEventListener("focus", () => row.classList.add("is-editing"));
         field.addEventListener("input", () => markSettingsRowDraft(row, "save"));
         field.addEventListener("change", () => markSettingsRowDraft(row, "save"));
       });
@@ -2259,6 +2269,11 @@
     payload.set("front", frontValue === "yes" ? "TRUE" : "FALSE");
     payload.set("mutation_id", createMutationId("product-cost"));
     await submitMutation(payload);
+    const productKey = normalizeFilterValue(product);
+    state.frontProducts = frontValue === "yes"
+      ? Array.from(new Set(state.frontProducts.concat(productKey)))
+      : state.frontProducts.filter((item) => item !== productKey);
+    saveStringList("hsbi-front-products", state.frontProducts);
     showNotificationSavedToast("Produto salvo");
     if (options.refresh !== false) await refreshData({ applySelection: true });
   }
@@ -2271,6 +2286,7 @@
     const salary = getSettingsFieldValue(row, "[data-attendant-field='salary']", decimal(Number(button.dataset.salary || 0)));
     const start = getSettingsFieldValue(row, "[data-attendant-field='start']", button.dataset.start || "");
     const pauses = getSettingsFieldValue(row, "[data-attendant-field='pauses']", button.dataset.pauses || "");
+    const manualValue = getSettingsFieldValue(row, "[data-manual-toggle]", "no");
     if (!name.trim()) {
       alert("Informe o nome do atendente.");
       return;
@@ -2284,8 +2300,14 @@
     payload.set("salario_fixo_mensal", salary);
     payload.set("inicio_trabalho", start);
     payload.set("pausas", pauses);
+    payload.set("lancar_vendas", manualValue === "yes" ? "TRUE" : "FALSE");
     payload.set("mutation_id", createMutationId("attendant"));
     await submitMutation(payload);
+    const attendantKey = normalizeFilterValue(name.trim() || currentName);
+    state.manualSalePermissions = manualValue === "yes"
+      ? Array.from(new Set(state.manualSalePermissions.concat(attendantKey)))
+      : state.manualSalePermissions.filter((item) => item !== attendantKey);
+    saveStringList("hsbi-manual-sale-attendants", state.manualSalePermissions);
     showNotificationSavedToast("Atendente salvo");
     if (options.refresh !== false) await refreshData({ applySelection: true });
   }
