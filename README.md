@@ -9,6 +9,7 @@ PWA multiempresa do HS Metrics. O frontend usa Supabase Auth, Postgres com RLS e
 - `/k9v2m7q4/`: painel do atendente, protegido por autenticação e função.
 - `supabase/schema.sql`: schema inicial.
 - `supabase/migrations/20260629_commercial_foundation.sql`: segurança multiempresa, assinatura, limites e campos comerciais.
+- `supabase/migrations/20260629_attendant_invites.sql`: convites e acesso do app da equipe.
 - `supabase/functions/sales-webhook`: entrada genérica de vendas.
 - `supabase/functions/meta-oauth-*`: conexão com Meta Ads v25.0.
 - `supabase/functions/meta-insights-sync`: sincronização de gastos, leads e conversas.
@@ -25,6 +26,6 @@ PWA multiempresa do HS Metrics. O frontend usa Supabase Auth, Postgres com RLS e
 
 ## Publicação
 
-O site pode ser hospedado no GitHub Pages. Ative `enforceSubscription` em `config.js` somente depois que os três checkouts e o webhook da Cakto estiverem configurados e testados.
+O app pode ser hospedado no GitHub Pages. Ative `enforceSubscription` em `config.js` somente depois que os três checkouts e o webhook da Cakto estiverem configurados e testados.
 
 Nunca coloque a chave `service_role`, o segredo do Meta ou o segredo da Cakto no frontend.
