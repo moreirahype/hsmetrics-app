@@ -5,6 +5,7 @@
     { apiUrl: "", metaTaxRate: 0.1383, rowsPerPage: 10, autoRefreshMinutes: 15, retentionDays: 730, currencyRates: { BRL: 1 } },
     window.HSBI_CONFIG || {}
   );
+  const dataProvider = window.HSMData || null;
 
   const standardPeriods = ["today", "yesterday", "last7", "month", "lastMonth"];
 
@@ -34,6 +35,7 @@
     refundMetricOptions: loadRefundMetricOptions(),
     metrics: {},
     pageIndex: 1,
+    settingsPageIndex: { goals: 1, attendants: 1, products: 1 },
     lastUpdated: null,
     notifications: loadNotificationPrefs(),
     animateDashboard: false
@@ -102,6 +104,15 @@
     goalsSearch: document.getElementById("goalsSearch"),
     attendantsSearch: document.getElementById("attendantsSearch"),
     productsSearch: document.getElementById("productsSearch"),
+    goalsPrevPage: document.getElementById("goalsPrevPage"),
+    goalsNextPage: document.getElementById("goalsNextPage"),
+    goalsPageInfo: document.getElementById("goalsPageInfo"),
+    attendantsPrevPage: document.getElementById("attendantsPrevPage"),
+    attendantsNextPage: document.getElementById("attendantsNextPage"),
+    attendantsPageInfo: document.getElementById("attendantsPageInfo"),
+    productsPrevPage: document.getElementById("productsPrevPage"),
+    productsNextPage: document.getElementById("productsNextPage"),
+    productsPageInfo: document.getElementById("productsPageInfo"),
     frontProductsList: document.getElementById("frontProductsList"),
     addGoalForm: document.getElementById("addGoalForm"),
     addGoalAttendant: document.getElementById("addGoalAttendant"),
@@ -114,7 +125,15 @@
     addProductName: document.getElementById("addProductName"),
     manualSaleAttendantsList: document.getElementById("manualSaleAttendantsList"),
     enableAllNotifications: document.getElementById("enableAllNotifications"),
-    testNotification: document.getElementById("testNotification")
+    testNotification: document.getElementById("testNotification"),
+    logoutButton: document.getElementById("logoutButton"),
+    salesWebhookUrl: document.getElementById("salesWebhookUrl"),
+    copyWebhookButton: document.getElementById("copyWebhookButton"),
+    regenerateWebhookButton: document.getElementById("regenerateWebhookButton"),
+    connectMetaButton: document.getElementById("connectMetaButton"),
+    metaConnectionStatus: document.getElementById("metaConnectionStatus"),
+    metaAccountsList: document.getElementById("metaAccountsList")
+    ,attendantAccessLinks: document.getElementById("attendantAccessLinks")
   };
 
   const metricIds = {
@@ -140,21 +159,61 @@
   let notificationToastTimer = null;
   const metricAnimationFrames = new Map();
 
-  document.addEventListener("DOMContentLoaded", init);
+  let applicationStarted = false;
+  function startApplication() {
+    if (applicationStarted) return;
+    applicationStarted = true;
+    init().catch((error) => {
+      console.error(error);
+      document.body.classList.remove("auth-pending");
+      setSyncText("Falha ao iniciar");
+    });
+  }
 
-  function init() {
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", startApplication, { once: true });
+    window.setTimeout(() => {
+      if (document.readyState !== "loading") startApplication();
+    }, 0);
+  } else {
+    startApplication();
+  }
+
+  async function init() {
+    if (dataProvider) {
+      const context = await dataProvider.requireAuth("owner");
+      if (!context) return;
+      applyWorkspacePreferences(context.workspace || {});
+    }
     applySidebarPreference();
     setDefaultDates();
     bindEvents();
     setPage(location.hash.replace("#", "") || "dashboard");
     renderNotifications();
     render();
+    initializeIntegrations();
     registerServiceWorker();
     refreshData();
     window.setInterval(() => refreshData(), config.autoRefreshMinutes * 60 * 1000);
     if (typeof Notification !== "undefined" && Notification.permission === "granted" && (isSaleNotificationsEnabled() || notificationTimes.some((time) => state.notifications[time]))) {
       window.setTimeout(() => syncOwnerPush().catch(console.error), 1000);
     }
+  }
+
+  function applyWorkspacePreferences(workspace) {
+    if (!workspace) return;
+    state.leadMetricSource = workspace.lead_metric_source === "leads" ? "leads" : "conversations";
+    state.attendantCostOptions = {
+      commission: Boolean(workspace.subtract_attendant_commission),
+      fixed: Boolean(workspace.subtract_attendant_fixed)
+    };
+    state.refundMetricOptions = {
+      enabled: Boolean(workspace.show_refund_metrics)
+    };
+  }
+
+  function hasBackend() {
+    return Boolean(dataProvider || config.apiUrl);
   }
 
   function bindEvents() {
@@ -193,6 +252,21 @@
     if (els.sidebarToggle) {
       els.sidebarToggle.addEventListener("click", toggleSidebar);
     }
+    if (els.logoutButton && dataProvider) {
+      els.logoutButton.addEventListener("click", async () => {
+        await dataProvider.signOut();
+        location.replace(new URL("../", location.href));
+      });
+    }
+    if (els.copyWebhookButton) {
+      els.copyWebhookButton.addEventListener("click", copySalesWebhookUrl);
+    }
+    if (els.regenerateWebhookButton) {
+      els.regenerateWebhookButton.addEventListener("click", regenerateSalesWebhookUrl);
+    }
+    if (els.connectMetaButton) {
+      els.connectMetaButton.addEventListener("click", connectMetaAds);
+    }
     els.transactionSearch.addEventListener("input", () => {
       state.pageIndex = 1;
       renderTransactions();
@@ -227,6 +301,7 @@
         if (!button || button.dataset.leadSource === state.leadMetricSource) return;
         state.leadMetricSource = button.dataset.leadSource === "leads" ? "leads" : "conversations";
         localStorage.setItem("hsbi-lead-metric-source", state.leadMetricSource);
+        persistWorkspacePreferences({ lead_metric_source: state.leadMetricSource });
         state.animateDashboard = state.page === "dashboard";
         render();
       });
@@ -237,6 +312,10 @@
         if (!input) return;
         state.attendantCostOptions[input.dataset.attendantCost] = input.checked;
         saveAttendantCostOptions();
+        persistWorkspacePreferences({
+          subtract_attendant_commission: Boolean(state.attendantCostOptions.commission),
+          subtract_attendant_fixed: Boolean(state.attendantCostOptions.fixed)
+        });
         state.animateDashboard = state.page === "dashboard";
         render();
       });
@@ -247,13 +326,25 @@
         if (!input) return;
         state.refundMetricOptions[input.dataset.refundMetric] = input.checked;
         saveRefundMetricOptions();
+        persistWorkspacePreferences({ show_refund_metrics: Boolean(state.refundMetricOptions.enabled) });
         showNotificationSavedToast("Alteração salva");
         render();
       });
     }
-    [els.goalsSearch, els.attendantsSearch, els.productsSearch].filter(Boolean).forEach((input) => {
-      input.addEventListener("input", renderSettingsPages);
+    [
+      [els.goalsSearch, "goals"],
+      [els.attendantsSearch, "attendants"],
+      [els.productsSearch, "products"]
+    ].forEach(([input, key]) => {
+      if (!input) return;
+      input.addEventListener("input", () => {
+        state.settingsPageIndex[key] = 1;
+        renderSettingsPages();
+      });
     });
+    bindSettingsPager("goals", els.goalsPrevPage, els.goalsNextPage);
+    bindSettingsPager("attendants", els.attendantsPrevPage, els.attendantsNextPage);
+    bindSettingsPager("products", els.productsPrevPage, els.productsNextPage);
     if (els.addGoalForm) els.addGoalForm.addEventListener("submit", addGoalFromForm);
     if (els.addAttendantForm) els.addAttendantForm.addEventListener("submit", addAttendantFromForm);
     if (els.addProductForm) els.addProductForm.addEventListener("submit", addProductFromForm);
@@ -345,6 +436,127 @@
     });
   }
 
+  function persistWorkspacePreferences(changes) {
+    if (!dataProvider) return;
+    dataProvider.updateWorkspaceSettings(changes).catch((error) => {
+      console.error(error);
+      showNotificationSavedToast("Não foi possível salvar o ajuste");
+    });
+  }
+
+  async function initializeIntegrations() {
+    if (!dataProvider || !els.salesWebhookUrl) return;
+    try {
+      const [webhookUrl, metaIntegration, adAccounts] = await Promise.all([
+        dataProvider.getSalesWebhookUrl(),
+        dataProvider.getIntegrationStatus("meta"),
+        dataProvider.getAdAccounts()
+      ]);
+      els.salesWebhookUrl.textContent = webhookUrl;
+      if (els.metaConnectionStatus) {
+        const count = Number(metaIntegration?.settings?.account_count || 0);
+        els.metaConnectionStatus.textContent = metaIntegration?.status === "active"
+          ? `${count || ""} ${count === 1 ? "conta conectada" : "contas conectadas"}`.trim()
+          : "Nenhuma conta conectada.";
+      }
+      renderMetaAccounts(adAccounts);
+      renderAttendantAccessLinks();
+    } catch (error) {
+      console.error(error);
+      els.salesWebhookUrl.textContent = "Não foi possível gerar a URL agora.";
+    }
+  }
+
+  function renderMetaAccounts(accounts) {
+    if (!els.metaAccountsList) return;
+    els.metaAccountsList.innerHTML = (accounts || []).map((account) => `
+      <label class="integration-account-row">
+        <span>${escapeHtml(account.name || account.external_id)}</span>
+        <span class="switch">
+          <input type="checkbox" data-meta-account="${escapeHtml(account.id)}" ${account.active ? "checked" : ""}>
+          <span class="slider"></span>
+        </span>
+      </label>
+    `).join("");
+    els.metaAccountsList.querySelectorAll("[data-meta-account]").forEach((input) => {
+      input.addEventListener("change", async () => {
+        input.disabled = true;
+        try {
+          await dataProvider.setAdAccountActive(input.dataset.metaAccount, input.checked);
+          showNotificationSavedToast("Conta atualizada");
+        } catch (error) {
+          input.checked = !input.checked;
+          alert(error.message);
+        } finally {
+          input.disabled = false;
+        }
+      });
+    });
+  }
+
+  function renderAttendantAccessLinks() {
+    if (!els.attendantAccessLinks) return;
+    const attendants = (state.attendantConfigs || []).filter((item) => item.id);
+    if (!attendants.length) {
+      els.attendantAccessLinks.innerHTML = `<p class="integration-status">Cadastre um atendente para gerar o acesso individual.</p>`;
+      return;
+    }
+    els.attendantAccessLinks.innerHTML = attendants.map((attendant) => `
+      <div class="team-access-row">
+        <span><strong>${escapeHtml(attendant.name || attendant.slug)}</strong><small>${attendant.userId ? "Acesso vinculado" : "Aguardando primeiro acesso"}</small></span>
+        <button type="button" data-create-attendant-invite="${escapeHtml(attendant.id)}">${attendant.userId ? "Novo link" : "Gerar link"}</button>
+      </div>
+    `).join("");
+    els.attendantAccessLinks.querySelectorAll("[data-create-attendant-invite]").forEach((button) => {
+      button.addEventListener("click", async () => {
+        button.disabled = true;
+        const label = button.textContent;
+        button.textContent = "Gerando...";
+        try {
+          const invite = await dataProvider.createAttendantInvite(button.dataset.createAttendantInvite);
+          await navigator.clipboard.writeText(invite.url);
+          showNotificationSavedToast("Link da equipe copiado");
+        } catch (error) {
+          alert(error.message || "Não foi possível gerar o link agora.");
+        } finally {
+          button.disabled = false;
+          button.textContent = label;
+        }
+      });
+    });
+  }
+
+  async function copySalesWebhookUrl() {
+    const url = els.salesWebhookUrl?.textContent || "";
+    if (!/^https:\/\//.test(url)) return;
+    await navigator.clipboard.writeText(url);
+    showNotificationSavedToast("URL copiada");
+  }
+
+  async function regenerateSalesWebhookUrl() {
+    if (!dataProvider || !window.confirm("Gerar uma nova URL? A URL anterior deixará de aceitar vendas.")) return;
+    els.regenerateWebhookButton.disabled = true;
+    try {
+      els.salesWebhookUrl.textContent = await dataProvider.regenerateSalesWebhookUrl();
+      showNotificationSavedToast("Nova URL gerada");
+    } catch (error) {
+      alert(error.message);
+    } finally {
+      els.regenerateWebhookButton.disabled = false;
+    }
+  }
+
+  async function connectMetaAds() {
+    if (!dataProvider) return;
+    els.connectMetaButton.disabled = true;
+    try {
+      await dataProvider.startMetaConnection();
+    } catch (error) {
+      alert(error.message);
+      els.connectMetaButton.disabled = false;
+    }
+  }
+
   function setPeriod(period) {
     if (!period || state.period === period) return;
     state.period = period;
@@ -424,6 +636,7 @@
   }
 
   async function fetchTransactionsPayload(range) {
+    if (dataProvider) return dataProvider.fetchTransactionsPayload(range);
     if (!config.apiUrl) return buildEmptyPayload();
     const url = new URL(config.apiUrl);
     url.searchParams.set("action", "data");
@@ -439,6 +652,7 @@
   }
 
   async function fetchMetaPayload(range) {
+    if (dataProvider) return dataProvider.fetchMetaPayload(range);
     if (!config.apiUrl) return buildEmptyPayload().meta;
     const url = new URL(config.apiUrl);
     url.searchParams.set("action", "meta");
@@ -482,8 +696,8 @@
 
   async function submitManualSale(event) {
     event.preventDefault();
-    if (!config.apiUrl) {
-      alert("Configure a URL da API antes de adicionar vendas.");
+    if (!hasBackend()) {
+      alert("O banco de dados ainda não foi configurado.");
       return;
     }
     const value = parseMoneyValue(els.manualSaleValue.value);
@@ -593,8 +807,8 @@
 
   async function submitTransactionEdit(event) {
     event.preventDefault();
-    if (!config.apiUrl) {
-      alert("Configure a URL da API antes de editar transações.");
+    if (!hasBackend()) {
+      alert("O banco de dados ainda não foi configurado.");
       return;
     }
     const id = els.transactionEditId.value;
@@ -661,6 +875,7 @@
   }
 
   async function submitMutation(payload) {
+    if (dataProvider) return dataProvider.submitMutation(payload);
     const mutationId = payload.get("mutation_id");
     if (!mutationId) throw new Error("Operacao sem identificador de confirmacao.");
     try {
@@ -673,7 +888,7 @@
   }
 
   async function savePendingTransactionDrafts() {
-    if (!config.apiUrl || !hasTransactionDrafts()) return;
+    if (!hasBackend() || !hasTransactionDrafts()) return;
     els.refreshButton.disabled = true;
     setRefreshButtonLoading(true);
     try {
@@ -708,7 +923,7 @@
   }
 
   async function savePendingSettingsDrafts() {
-    if (!config.apiUrl || !hasSettingsDrafts()) return;
+    if (!hasBackend() || !hasSettingsDrafts()) return;
     els.refreshButton.disabled = true;
     setRefreshButtonLoading(true);
     try {
@@ -776,8 +991,8 @@
   }
 
   async function deleteCurrentTransaction() {
-    if (!config.apiUrl) {
-      alert("Configure a URL da API antes de apagar transações.");
+    if (!hasBackend()) {
+      alert("O banco de dados ainda não foi configurado.");
       return;
     }
     const id = els.transactionEditId.value;
@@ -914,6 +1129,8 @@
   function normalizeAttendantConfigs(attendants) {
     return (Array.isArray(attendants) ? attendants : [])
       .map((item) => ({
+        id: String(item.id || "").trim(),
+        userId: String(item.user_id || item.userId || "").trim(),
         slug: String(item.slug || "").trim(),
         name: String(item.nome || item.name || "").trim(),
         commission: parseMoneyValue(item.comissao_percentual || item.commission || 0),
@@ -1998,6 +2215,45 @@
     };
   }
 
+  function bindSettingsPager(key, previousButton, nextButton) {
+    if (previousButton) {
+      previousButton.addEventListener("click", () => {
+        state.settingsPageIndex[key] = Math.max(1, Number(state.settingsPageIndex[key] || 1) - 1);
+        renderSettingsPages();
+      });
+    }
+    if (nextButton) {
+      nextButton.addEventListener("click", () => {
+        state.settingsPageIndex[key] = Number(state.settingsPageIndex[key] || 1) + 1;
+        renderSettingsPages();
+      });
+    }
+  }
+
+  function paginateSettingsRows(rows, key) {
+    const perPage = Math.max(1, Number(config.rowsPerPage || 10));
+    const totalPages = Math.max(1, Math.ceil(rows.length / perPage));
+    const currentPage = Math.min(totalPages, Math.max(1, Number(state.settingsPageIndex[key] || 1)));
+    state.settingsPageIndex[key] = currentPage;
+    return {
+      rows: rows.slice((currentPage - 1) * perPage, currentPage * perPage),
+      currentPage,
+      totalPages
+    };
+  }
+
+  function renderSettingsPager(key, page) {
+    const map = {
+      goals: [els.goalsPrevPage, els.goalsNextPage, els.goalsPageInfo],
+      attendants: [els.attendantsPrevPage, els.attendantsNextPage, els.attendantsPageInfo],
+      products: [els.productsPrevPage, els.productsNextPage, els.productsPageInfo]
+    };
+    const [previousButton, nextButton, label] = map[key] || [];
+    if (previousButton) previousButton.disabled = page.currentPage <= 1;
+    if (nextButton) nextButton.disabled = page.currentPage >= page.totalPages;
+    if (label) label.textContent = `Página ${page.currentPage} de ${page.totalPages}`;
+  }
+
   function renderSettingsPages() {
     renderGoalSettings();
     renderLeadMetricOptions();
@@ -2005,8 +2261,15 @@
     renderRefundMetricOptions();
     renderFrontProductsSettings();
     renderManualSalePermissionSettings();
+    renderAttendantAccessLinks();
     bindSettingsMirrorEditButtons();
     bindSettingsDraftEvents();
+    refreshCustomSelects();
+    requestAnimationFrame(() => {
+      document.querySelectorAll(".settings-table").forEach((table) => {
+        table.scrollLeft = 0;
+      });
+    });
   }
 
   function renderAttendantCostOptions() {
@@ -2023,6 +2286,31 @@
     });
   }
 
+  function getSettingsDraft(key) {
+    return key && state.settingsDrafts ? state.settingsDrafts[key] : null;
+  }
+
+  function settingsRowClasses(baseClass, key) {
+    const draft = getSettingsDraft(key);
+    return `${baseClass}${draft ? " is-draft-row" : ""}${draft && draft.action === "delete" ? " is-delete-draft" : ""}`;
+  }
+
+  function draftFieldValue(key, field, fallback = "") {
+    const draft = getSettingsDraft(key);
+    if (!draft || !draft.data || draft.data[field] === undefined) return fallback;
+    return draft.data[field];
+  }
+
+  function collectSettingsDraftData(row) {
+    const data = {};
+    row.querySelectorAll("input, select").forEach((field) => {
+      const name = field.dataset.goalField || field.dataset.productField || field.dataset.attendantField || (field.hasAttribute("data-front-toggle") ? "front" : "") || (field.hasAttribute("data-manual-toggle") ? "manual" : "");
+      if (!name) return;
+      data[name] = field.value;
+    });
+    return data;
+  }
+
   function renderGoalSettings() {
     const list = document.getElementById("goalsSettingsList");
     if (!list) return;
@@ -2031,29 +2319,38 @@
       const haystack = normalizeSearchText(`${goal.slug || ""} ${goal.title || ""} ${goal.prize || ""}`);
       return !query || haystack.includes(query);
     });
+    const page = paginateSettingsRows(goals, "goals");
+    renderSettingsPager("goals", page);
     if (!goals.length) {
       list.innerHTML = `<p class="settings-empty">Nenhuma meta cadastrada ainda.</p>`;
       return;
     }
-    list.innerHTML = goals.map((goal) => `
-      <div class="settings-table-row settings-goal-row" data-settings-draft-key="goal:${escapeHtml(`${goal.slug || ""}:${goal.title || ""}`)}">
-        <input data-goal-field="slug" value="${escapeHtml(goal.slug || "")}" aria-label="Atendente" readonly>
-        <input data-goal-field="title" value="${escapeHtml(goal.title)}" aria-label="Meta" readonly>
-        <input data-goal-field="value" value="${escapeHtml(decimal(goal.value || 0))}" inputmode="decimal" aria-label="Valor" readonly>
-        <input data-goal-field="prize" value="${escapeHtml(goal.prize || "")}" aria-label="Prêmio" readonly>
+    list.innerHTML = page.rows.map((goal) => {
+      const key = `goal:${goal.slug || ""}:${goal.title || ""}`;
+      const slug = draftFieldValue(key, "slug", goal.slug || "");
+      const title = draftFieldValue(key, "title", goal.title);
+      const value = draftFieldValue(key, "value", decimal(goal.value || 0));
+      const prize = draftFieldValue(key, "prize", goal.prize || "");
+      const active = draftFieldValue(key, "active", goal.active ? "TRUE" : "FALSE");
+      return `
+      <div class="${settingsRowClasses("settings-table-row settings-goal-row", key)}" data-settings-draft-key="${escapeHtml(key)}">
+        <input data-goal-field="slug" value="${escapeHtml(slug)}" aria-label="Atendente" readonly>
+        <input data-goal-field="title" value="${escapeHtml(title)}" aria-label="Meta" readonly>
+        <input data-goal-field="value" value="${escapeHtml(value)}" inputmode="decimal" aria-label="Valor" readonly>
+        <input data-goal-field="prize" value="${escapeHtml(prize)}" aria-label="Prêmio" readonly>
         <select data-goal-field="active" aria-label="Status" disabled>
-          <option value="TRUE" ${goal.active ? "selected" : ""}>Ativa</option>
-          <option value="FALSE" ${!goal.active ? "selected" : ""}>Inativa</option>
+          <option value="TRUE" ${active === "TRUE" ? "selected" : ""}>Ativa</option>
+          <option value="FALSE" ${active !== "TRUE" ? "selected" : ""}>Inativa</option>
         </select>
         <div class="settings-row-actions">
-          <button class="settings-row-edit-button" type="button" aria-label="Editar meta ${escapeHtml(goal.title)}">
+          <button class="settings-row-edit-button" type="button" aria-label="Editar meta ${escapeHtml(title)}">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 17.25V20h2.75L17.81 8.94l-2.75-2.75L4 17.25Zm15.71-10.04a1 1 0 0 0 0-1.41L18.2 4.29a1 1 0 0 0-1.41 0l-1.02 1.02 2.75 2.75 1.19-1.19Z"></path></svg>
           </button>
           <button class="settings-save-button" type="button" data-settings-edit="goal" data-slug="${escapeHtml(goal.slug || "")}" data-title="${escapeHtml(goal.title)}" data-value="${escapeHtml(String(goal.value || 0))}" data-prize="${escapeHtml(goal.prize || "")}" data-active="${goal.active ? "true" : "false"}">Salvar</button>
           <button class="settings-delete-button" type="button" data-settings-delete="goal" data-slug="${escapeHtml(goal.slug || "")}" data-title="${escapeHtml(goal.title)}" aria-label="Excluir meta ${escapeHtml(goal.title)}">Apagar</button>
         </div>
-      </div>
-    `).join("");
+      </div>`;
+    }).join("");
     bindSettingsMirrorEditButtons();
   }
 
@@ -2069,18 +2366,24 @@
     if (!els.frontProductsList) return;
     const query = normalizeSearchText(els.productsSearch ? els.productsSearch.value : "");
     const products = getConfigProductRows().filter((product) => !query || normalizeSearchText(product.name).includes(query));
+    const page = paginateSettingsRows(products, "products");
+    renderSettingsPager("products", page);
     if (!products.length) {
       els.frontProductsList.innerHTML = `<p class="settings-empty">Nenhum produto cadastrado ainda.</p>`;
       return;
     }
-    els.frontProductsList.innerHTML = products.map((product) => {
+    els.frontProductsList.innerHTML = page.rows.map((product) => {
       const key = normalizeFilterValue(product.name);
-      const isFront = product.front || state.frontProducts.includes(key);
+      const draftKey = `product:${product.name}`;
+      const name = draftFieldValue(draftKey, "name", product.name);
+      const fixed = draftFieldValue(draftKey, "fixed", decimal(product.fixed || 0));
+      const percent = draftFieldValue(draftKey, "percent", decimal(product.percent || 0));
+      const isFront = draftFieldValue(draftKey, "front", (product.front || state.frontProducts.includes(key)) ? "yes" : "no") === "yes";
       return `
-        <div class="settings-table-row settings-product-row" data-settings-draft-key="product:${escapeHtml(product.name)}">
-          <input data-product-field="name" data-locked-field value="${escapeHtml(product.name)}" readonly aria-label="Produto">
-          <input data-product-field="fixed" value="${escapeHtml(decimal(product.fixed || 0))}" inputmode="decimal" aria-label="Custo fixo" readonly>
-          <input data-product-field="percent" value="${escapeHtml(decimal(product.percent || 0))}" inputmode="decimal" aria-label="Custo percentual" readonly>
+        <div class="${settingsRowClasses("settings-table-row settings-product-row", draftKey)}" data-settings-draft-key="${escapeHtml(draftKey)}">
+          <input data-product-field="name" data-locked-field value="${escapeHtml(name)}" readonly aria-label="Produto">
+          <input data-product-field="fixed" value="${escapeHtml(fixed)}" inputmode="decimal" aria-label="Custo fixo" readonly>
+          <input data-product-field="percent" value="${escapeHtml(percent)}" inputmode="decimal" aria-label="Custo percentual" readonly>
           <select data-front-toggle value="${escapeHtml(key)}" aria-label="Produto de front" disabled>
             <option value="yes" ${isFront ? "selected" : ""}>Sim</option>
             <option value="no" ${!isFront ? "selected" : ""}>Não</option>
@@ -2100,22 +2403,31 @@
     if (!els.manualSaleAttendantsList) return;
     const query = normalizeSearchText(els.attendantsSearch ? els.attendantsSearch.value : "");
     const attendants = getConfigAttendantRows().filter((attendant) => !query || normalizeSearchText(attendant.name).includes(query));
+    const page = paginateSettingsRows(attendants, "attendants");
+    renderSettingsPager("attendants", page);
     if (!attendants.length) {
       els.manualSaleAttendantsList.innerHTML = `<p class="settings-empty">Nenhum atendente cadastrado ainda.</p>`;
       return;
     }
-    els.manualSaleAttendantsList.innerHTML = attendants.map((attendant) => {
+    els.manualSaleAttendantsList.innerHTML = page.rows.map((attendant) => {
       const key = normalizeFilterValue(attendant.name);
+      const draftKey = `attendant:${attendant.slug || attendant.name}`;
+      const name = draftFieldValue(draftKey, "name", attendant.name);
+      const commission = draftFieldValue(draftKey, "commission", decimal(attendant.commission || 0));
+      const salary = draftFieldValue(draftKey, "salary", decimal(attendant.salary || 0));
+      const start = draftFieldValue(draftKey, "start", attendant.start || "");
+      const pauses = draftFieldValue(draftKey, "pauses", attendant.pauses || "");
+      const manual = draftFieldValue(draftKey, "manual", state.manualSalePermissions.includes(key) ? "yes" : "no");
       return `
-        <div class="settings-table-row settings-attendant-row" data-settings-draft-key="attendant:${escapeHtml(attendant.slug || attendant.name)}">
-          <input data-attendant-field="name" value="${escapeHtml(attendant.name)}" aria-label="Nome" readonly>
-          <input data-attendant-field="commission" value="${escapeHtml(decimal(attendant.commission || 0))}" inputmode="decimal" aria-label="Comissão" readonly>
-          <input data-attendant-field="salary" value="${escapeHtml(decimal(attendant.salary || 0))}" inputmode="decimal" aria-label="Fixo mensal" readonly>
-          <input data-attendant-field="start" value="${escapeHtml(attendant.start || "")}" placeholder="aaaa-mm-dd" aria-label="Início" readonly>
-          <input data-attendant-field="pauses" value="${escapeHtml(attendant.pauses || "")}" placeholder="Sem pausas" aria-label="Pausas" readonly>
+        <div class="${settingsRowClasses("settings-table-row settings-attendant-row", draftKey)}" data-settings-draft-key="${escapeHtml(draftKey)}">
+          <input data-attendant-field="name" value="${escapeHtml(name)}" aria-label="Nome" readonly>
+          <input data-attendant-field="commission" value="${escapeHtml(commission)}" inputmode="decimal" aria-label="Comissão" readonly>
+          <input data-attendant-field="salary" value="${escapeHtml(salary)}" inputmode="decimal" aria-label="Fixo mensal" readonly>
+          <input data-attendant-field="start" value="${escapeHtml(start)}" placeholder="aaaa-mm-dd" aria-label="Início" readonly>
+          <input data-attendant-field="pauses" value="${escapeHtml(pauses)}" placeholder="Sem pausas" aria-label="Pausas" readonly>
           <select data-manual-toggle aria-label="Permitir lançamento manual" disabled>
-            <option value="yes" ${state.manualSalePermissions.includes(key) ? "selected" : ""}>Sim</option>
-            <option value="no" ${!state.manualSalePermissions.includes(key) ? "selected" : ""}>Não</option>
+            <option value="yes" ${manual === "yes" ? "selected" : ""}>Sim</option>
+            <option value="no" ${manual !== "yes" ? "selected" : ""}>Não</option>
           </select>
           <div class="settings-row-actions">
             <button class="settings-row-edit-button" type="button" aria-label="Editar atendente ${escapeHtml(attendant.name)}">
@@ -2191,7 +2503,11 @@
   function markSettingsRowDraft(row, action) {
     const key = row.dataset.settingsDraftKey;
     if (!key) return;
-    state.settingsDrafts[key] = { key, action: action || "save" };
+    state.settingsDrafts[key] = {
+      key,
+      action: action || "save",
+      data: collectSettingsDraftData(row)
+    };
     row.classList.add("is-draft-row");
     row.classList.toggle("is-delete-draft", action === "delete");
     updateRefreshButtonState();

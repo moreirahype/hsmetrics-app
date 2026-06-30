@@ -1,21 +1,30 @@
 # HS Metrics App
 
-PWA do HS Metrics, com dashboard principal e app de atendente.
+PWA multiempresa do HS Metrics. O frontend usa Supabase Auth, Postgres com RLS e Edge Functions; não depende de Google Sheets ou Apps Script.
 
-## Páginas
+## Estrutura
 
-- Dono: `/x7p4r9m2/`
-- Sheila: `/k9v2m7q4/`
+- `/`: login e criação de conta.
+- `/x7p4r9m2/`: painel do dono, protegido por autenticação.
+- `/k9v2m7q4/`: painel do atendente, protegido por autenticação e função.
+- `supabase/schema.sql`: schema inicial.
+- `supabase/migrations/20260629_commercial_foundation.sql`: segurança multiempresa, assinatura, limites e campos comerciais.
+- `supabase/functions/sales-webhook`: entrada genérica de vendas.
+- `supabase/functions/meta-oauth-*`: conexão com Meta Ads v25.0.
+- `supabase/functions/meta-insights-sync`: sincronização de gastos, leads e conversas.
+- `supabase/functions/cakto-subscription`: controle de acesso pelos eventos de assinatura da Cakto.
 
-## Configuração
+## Implantação do banco
 
-Edite `config.js` com os endpoints necessários enquanto a versão comercial ainda estiver em fase estática/protótipo.
-
-## Requisitos comerciais
-
-- Custo de produto por venda: permitir configurar um custo fixo e/ou percentual por produto/oferta. Esse custo deve ser subtraído de cada venda nos cálculos de lucro real, margem, ROAS real, CPA real e relatórios. Quando fixo e percentual estiverem preenchidos, aplicar os dois.
-- O custo precisa funcionar tanto para vendas vindas por integração/webhook quanto para vendas lançadas manualmente.
+1. Rode `supabase/schema.sql` no SQL Editor do Supabase.
+2. Rode `supabase/migrations/20260629_commercial_foundation.sql`.
+3. Rode `supabase/migrations/20260629_attendant_invites.sql`.
+4. Faça deploy das funções em `supabase/functions`.
+5. Configure os segredos das funções: `META_APP_ID`, `META_APP_SECRET`, `META_REDIRECT_URL`, `APP_URL`, `SYNC_SECRET`, `CAKTO_WEBHOOK_SECRET`, `CAKTO_START_PRODUCT_ID`, `CAKTO_PRO_PRODUCT_ID` e `CAKTO_SCALE_PRODUCT_ID`.
+6. Programe `meta-insights-sync` a cada 15 minutos com o header `Authorization: Bearer <SYNC_SECRET>`.
 
 ## Publicação
 
-Pode ser publicado como site estático no GitHub Pages durante a fase de protótipo. A versão comercial final deve evoluir para login, banco de dados e controle de assinatura.
+O site pode ser hospedado no GitHub Pages. Ative `enforceSubscription` em `config.js` somente depois que os três checkouts e o webhook da Cakto estiverem configurados e testados.
+
+Nunca coloque a chave `service_role`, o segredo do Meta ou o segredo da Cakto no frontend.

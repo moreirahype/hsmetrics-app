@@ -1,5 +1,10 @@
-const CACHE_NAME = "hsmetrics-sales-app-v57";
+const CACHE_NAME = "hsmetrics-sales-app-v59";
 const ASSETS = [
+  "./",
+  "./index.html",
+  "./auth.css",
+  "./auth.js",
+  "./supabase-provider.js",
   "./styles.css",
   "./app.js",
   "./attendant.css",
@@ -51,15 +56,15 @@ self.addEventListener("push", (event) => {
   try {
     payload = event.data ? event.data.json() : {};
   } catch {
-    payload = { title: "Home Studio BI", body: event.data ? event.data.text() : "" };
+    payload = { title: "HS Metrics", body: event.data ? event.data.text() : "" };
   }
   const url = payload.url || self.registration.scope;
   event.waitUntil(
-    self.registration.showNotification(payload.title || "Home Studio BI", {
+    self.registration.showNotification(payload.title || "HS Metrics", {
       body: payload.body || "",
       icon: new URL("./assets/icon-192.png", self.registration.scope).href,
       badge: new URL("./assets/icon-192.png", self.registration.scope).href,
-      tag: payload.tag || "home-studio-bi",
+      tag: payload.tag || "hs-metrics",
       data: { url }
     })
   );

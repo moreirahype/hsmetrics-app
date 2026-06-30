@@ -8,21 +8,21 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black">
     <meta name="apple-mobile-web-app-title" content="HS Metrics">
     <title>HS Metrics - Sheila</title>
-    <link rel="manifest" href="../manifest.webmanifest?v=97">
+    <link rel="manifest" href="../manifest.webmanifest?v=98">
     <link rel="apple-touch-icon" href="../assets/apple-touch-icon.png?v=56">
     <link rel="apple-touch-icon" sizes="180x180" href="../assets/apple-touch-icon.png?v=56">
     <link rel="apple-touch-icon" sizes="192x192" href="../assets/icon-192.png?v=56">
     <link rel="apple-touch-icon" sizes="512x512" href="../assets/icon-512.png?v=56">
     <link rel="icon" href="../assets/icon-192.png?v=56" type="image/png">
-    <link rel="stylesheet" href="../styles.css?v=97">
-    <link rel="stylesheet" href="../attendant.css?v=97">
+    <link rel="stylesheet" href="../styles.css?v=101">
+    <link rel="stylesheet" href="../attendant.css?v=98">
   </head>
-  <body>
+  <body class="auth-pending">
     <div class="app-shell">
       <aside class="sidebar" aria-label="Navegação principal">
         <a class="brand" href="#dashboard" aria-label="HS Metrics">
           <span class="brand-mark" aria-hidden="true"><img src="../assets/icon-192.png?v=56" alt=""></span>
-          <img class="brand-wordmark" src="../assets/hs-metrics-written-logo.webp?v=97" alt="HS Metrics">
+          <img class="brand-wordmark" src="../assets/hs-metrics-written-logo.webp?v=98" alt="HS Metrics">
         </a>
         <button class="sidebar-toggle" id="sidebarToggle" type="button" aria-label="Recolher barra lateral" aria-expanded="true" title="Recolher barra lateral">
           <span aria-hidden="true"></span>
@@ -33,7 +33,7 @@
             <span>Dashboard</span>
           </button>
           <button class="nav-item" data-page="transactions" type="button" aria-label="Transações">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 6h14v2H5zm0 5h14v2H5zm0 5h14v2H5z"></path></svg>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2V3zm3 4v2h6V7H9zm0 4v2h6v-2H9zm0 4v2h4v-2H9z"></path></svg>
             <span>Transações</span>
           </button>
           <button class="nav-item" data-page="notifications" type="button" aria-label="Notificações">
@@ -41,13 +41,17 @@
             <span>Notificações</span>
           </button>
         </nav>
+        <button class="logout-button" id="logoutButton" type="button" aria-label="Sair da conta">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 4H5v16h5v-2H7V6h3zm4.6 3.4L13.2 8.8l2.2 2.2H9v2h6.4l-2.2 2.2 1.4 1.4L19.2 12z"></path></svg>
+          <span>Sair</span>
+        </button>
       </aside>
 
       <main class="main attendant-main">
         <header class="mobile-header">
           <a class="brand" href="#dashboard" aria-label="HS Metrics">
             <span class="brand-mark" aria-hidden="true"><img src="../assets/icon-192.png?v=56" alt=""></span>
-            <img class="brand-wordmark" src="../assets/hs-metrics-written-logo.webp?v=97" alt="HS Metrics">
+            <img class="brand-wordmark" src="../assets/hs-metrics-written-logo.webp?v=98" alt="HS Metrics">
           </a>
           <span class="sync-pill" id="syncStatus">Carregando</span>
         </header>
@@ -177,7 +181,7 @@
           <span>Dashboard</span>
         </button>
         <button class="bottom-item" data-page="transactions" type="button" aria-label="Transações">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 6h14v2H5zm0 5h14v2H5zm0 5h14v2H5z"></path></svg>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2V3zm3 4v2h6V7H9zm0 4v2h6v-2H9zm0 4v2h4v-2H9z"></path></svg>
           <span>Transações</span>
         </button>
         <button class="bottom-item" data-page="notifications" type="button" aria-label="Notificações">
@@ -186,12 +190,13 @@
         </button>
       </nav>
     </div>
-    <script src="../config.js?v=56"></script>
+    <script src="../config.js?v=101"></script>
+    <script src="../supabase-provider.js?v=2"></script>
     <script src="../push-client.js?v=63"></script>
     <script>
       window.HSBI_ATTENDANT_CONFIG = { slug: "k9v2m7q4", name: "Sheila" };
     </script>
-    <script src="../attendant.js?v=70"></script>
+    <script src="../attendant.js?v=73"></script>
   </body>
 </html>
 

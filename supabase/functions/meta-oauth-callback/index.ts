@@ -1,0 +1,84 @@
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
+function redirect(appUrl: string, status: string, detail = "") {
+  const target = new URL("./x7p4r9m2/#integrations", appUrl.endsWith("/") ? appUrl : `${appUrl}/`);
+  target.searchParams.set("meta", status);
+  if (detail) target.searchParams.set("detail", detail);
+  return Response.redirect(target.toString(), 302);
+}
+
+Deno.serve(async (request) => {
+  const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
+  const appUrl = Deno.env.get("APP_URL") || "https://moreirahype.github.io/hsmetrics-app/";
+  const requestUrl = new URL(request.url);
+  const state = requestUrl.searchParams.get("state") || "";
+  const code = requestUrl.searchParams.get("code") || "";
+  if (!state || !code) return redirect(appUrl, "error", "Resposta incompleta do Meta.");
+
+  try {
+    const service = createClient(supabaseUrl, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "", { auth: { persistSession: false } });
+    const { data: states, error: stateError } = await service
+      .from("oauth_states")
+      .select("*")
+      .eq("state", state)
+      .eq("provider", "meta")
+      .is("used_at", null)
+      .gt("expires_at", new Date().toISOString())
+      .limit(1);
+    if (stateError) throw stateError;
+    const storedState = states?.[0];
+    if (!storedState) return redirect(appUrl, "error", "Conexao expirada. Tente novamente.");
+
+    const redirectUri = Deno.env.get("META_REDIRECT_URL") || `${supabaseUrl}/functions/v1/meta-oauth-callback`;
+    const tokenUrl = new URL("https://graph.facebook.com/v25.0/oauth/access_token");
+    tokenUrl.searchParams.set("client_id", Deno.env.get("META_APP_ID") || "");
+    tokenUrl.searchParams.set("client_secret", Deno.env.get("META_APP_SECRET") || "");
+    tokenUrl.searchParams.set("redirect_uri", redirectUri);
+    tokenUrl.searchParams.set("code", code);
+    const tokenResponse = await fetch(tokenUrl);
+    const tokenPayload = await tokenResponse.json();
+    if (!tokenResponse.ok || !tokenPayload.access_token) throw new Error(tokenPayload?.error?.message || "Meta nao retornou um token valido.");
+
+    const accountsUrl = new URL("https://graph.facebook.com/v25.0/me/adaccounts");
+    accountsUrl.searchParams.set("fields", "id,name,account_status");
+    accountsUrl.searchParams.set("limit", "200");
+    accountsUrl.searchParams.set("access_token", tokenPayload.access_token);
+    const accountsResponse = await fetch(accountsUrl);
+    const accountsPayload = await accountsResponse.json();
+    if (!accountsResponse.ok) throw new Error(accountsPayload?.error?.message || "Nao foi possivel listar as contas de anuncio.");
+
+    const { error: secretError } = await service.from("integration_secrets").upsert({
+      workspace_id: storedState.workspace_id,
+      provider: "meta",
+      secrets: { access_token: tokenPayload.access_token },
+      updated_at: new Date().toISOString()
+    }, { onConflict: "workspace_id,provider" });
+    if (secretError) throw secretError;
+
+    const accounts = (accountsPayload.data || []).map((account: Record<string, unknown>) => ({
+      workspace_id: storedState.workspace_id,
+      provider: "meta",
+      external_id: String(account.id || ""),
+      name: String(account.name || account.id || "Conta Meta Ads"),
+      active: Number(account.account_status || 0) === 1
+    })).filter((account: Record<string, unknown>) => account.external_id);
+    if (accounts.length) {
+      const { error: accountsError } = await service.from("ad_accounts").upsert(accounts, { onConflict: "workspace_id,provider,external_id" });
+      if (accountsError) throw accountsError;
+    }
+
+    const { error: integrationError } = await service.from("integrations").upsert({
+      workspace_id: storedState.workspace_id,
+      provider: "meta",
+      status: "active",
+      settings: { connected_at: new Date().toISOString(), account_count: accounts.length },
+      updated_at: new Date().toISOString()
+    }, { onConflict: "workspace_id,provider" });
+    if (integrationError) throw integrationError;
+    await service.from("oauth_states").update({ used_at: new Date().toISOString() }).eq("state", state);
+    return redirect(appUrl, "connected");
+  } catch (error) {
+    console.error(error);
+    return redirect(appUrl, "error", error instanceof Error ? error.message : "Falha na conexao com o Meta.");
+  }
+});

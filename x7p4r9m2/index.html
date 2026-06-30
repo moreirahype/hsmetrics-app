@@ -8,22 +8,22 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black">
     <meta name="apple-mobile-web-app-title" content="HS Metrics">
     <title>HS Metrics</title>
-    <link rel="manifest" href="../manifest.webmanifest?v=97">
+    <link rel="manifest" href="../manifest.webmanifest?v=98">
     <link rel="apple-touch-icon" href="../assets/apple-touch-icon.png?v=55">
     <link rel="apple-touch-icon" sizes="180x180" href="../assets/apple-touch-icon.png?v=55">
     <link rel="apple-touch-icon" sizes="192x192" href="../assets/icon-192.png?v=55">
     <link rel="apple-touch-icon" sizes="512x512" href="../assets/icon-512.png?v=55">
     <link rel="icon" href="../assets/icon-192.png?v=55" type="image/png">
-    <link rel="stylesheet" href="../styles.css?v=98">
+    <link rel="stylesheet" href="../styles.css?v=101">
   </head>
-  <body>
+  <body class="auth-pending">
     <div class="app-shell">
       <aside class="sidebar" aria-label="Navegação principal">
         <a class="brand" href="#dashboard" aria-label="HS Metrics">
           <span class="brand-mark" aria-hidden="true">
             <img src="../assets/icon-192.png?v=55" alt="">
           </span>
-          <img class="brand-wordmark" src="../assets/hs-metrics-written-logo.webp?v=97" alt="HS Metrics">
+          <img class="brand-wordmark" src="../assets/hs-metrics-written-logo.webp?v=98" alt="HS Metrics">
         </a>
         <button class="sidebar-toggle" id="sidebarToggle" type="button" aria-label="Recolher barra lateral" aria-expanded="true" title="Recolher barra lateral">
           <span aria-hidden="true"></span>
@@ -42,7 +42,7 @@
             <span>Produtos</span>
           </button>
           <button class="nav-item" data-page="transactions" type="button" aria-label="Transações">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 6h14v2H5zm0 5h14v2H5zm0 5h14v2H5z"></path></svg>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2V3zm3 4v2h6V7H9zm0 4v2h6v-2H9zm0 4v2h4v-2H9z"></path></svg>
             <span>Transações</span>
           </button>
           <button class="nav-item" data-page="goals" type="button" aria-label="Definir metas">
@@ -66,6 +66,10 @@
             <span>Notificações</span>
           </button>
         </nav>
+        <button class="logout-button" id="logoutButton" type="button" aria-label="Sair da conta">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 4H5v16h5v-2H7V6h3zm4.6 3.4L13.2 8.8l2.2 2.2H9v2h6.4l-2.2 2.2 1.4 1.4L19.2 12z"></path></svg>
+          <span>Sair</span>
+        </button>
       </aside>
 
       <main class="main">
@@ -74,7 +78,7 @@
             <span class="brand-mark" aria-hidden="true">
               <img src="../assets/icon-192.png?v=55" alt="">
             </span>
-            <img class="brand-wordmark" src="../assets/hs-metrics-written-logo.webp?v=97" alt="HS Metrics">
+            <img class="brand-wordmark" src="../assets/hs-metrics-written-logo.webp?v=98" alt="HS Metrics">
           </a>
           <span class="sync-pill" id="syncStatus">Carregando</span>
         </header>
@@ -438,6 +442,11 @@
               </div>
               <div id="goalsSettingsList"></div>
             </div>
+            <div class="pager settings-pager">
+              <button id="goalsPrevPage" type="button">Anterior</button>
+              <span id="goalsPageInfo">Página 1 de 1</span>
+              <button id="goalsNextPage" type="button">Próxima</button>
+            </div>
           </article>
         </section>
 
@@ -478,7 +487,12 @@
               </div>
               <div id="manualSaleAttendantsList"></div>
             </div>
-            <p class="settings-help">Apagar um atendente limpa apenas a configuração dele nesta tela. As transações antigas continuam preservadas com o nome que chegou na venda.</p>
+            <div class="pager settings-pager">
+              <button id="attendantsPrevPage" type="button">Anterior</button>
+              <span id="attendantsPageInfo">Página 1 de 1</span>
+              <button id="attendantsNextPage" type="button">Próxima</button>
+            </div>
+            <p class="settings-help">Apagar um atendente não altera transações antigas.</p>
             <p class="settings-help">O fixo mensal é distribuído ao longo de 30 dias para aparecer como ganho fixo diário no app do atendente. O dia 31 é sempre desconsiderado nessa divisão.</p>
             <p class="settings-help">Os seletores de comissão e fixo definem se esses custos entram no cálculo do lucro do dashboard.</p>
             <p class="settings-help">Lançar vendas habilita ou bloqueia lançamentos manuais no app do atendente. Use apenas para pessoas em que você confia para registrar vendas por conta própria.</p>
@@ -507,7 +521,12 @@
               </div>
               <div id="frontProductsList"></div>
             </div>
-            <p class="settings-help">Apagar um produto limpa apenas a configuração dele nesta tela. As transações antigas continuam preservadas com o produto que chegou na venda.</p>
+            <div class="pager settings-pager">
+              <button id="productsPrevPage" type="button">Anterior</button>
+              <span id="productsPageInfo">Página 1 de 1</span>
+              <button id="productsNextPage" type="button">Próxima</button>
+            </div>
+            <p class="settings-help">Apagar um produto não altera transações antigas.</p>
             <p class="settings-help">Para evitar nomes diferentes, é obrigatório que o produto tenha pelo menos uma venda registrada. Depois disso, ele aparece aqui como produto vendido nos últimos 90 dias e você só seleciona, sem precisar digitar.</p>
           </article>
         </section>
@@ -515,10 +534,35 @@
         <section class="page" id="page-integrations" data-page="integrations">
           <article class="panel settings-panel">
             <div class="panel-header"><h1>Integrações</h1></div>
-            <div class="settings-grid">
-              <div><h2>Vendas automáticas</h2><p>Configure sua ferramenta para enviar um POST para a URL do Apps Script. Envie valor, cliente, telefone, moeda, atendente e produto. Campos recomendados: valor, pagador, telefone, moeda, atendente e produto.</p></div>
-              <div><h2>Lançamento manual</h2><p>Se a venda ainda não roda no automático, lance em segundos pela aba Transações.</p></div>
-              <div><h2>Meta Ads</h2><p>Conecte suas contas Meta Ads para acompanhar gastos, imposto, leads ou conversas e lucro real. Em breve esta tela terá conexão guiada; por enquanto, deixe as propriedades da API configuradas no Apps Script.</p></div>
+            <div class="settings-grid integrations-grid">
+              <div class="integration-card">
+                <h2>Vendas por webhook</h2>
+                <p>Copie a URL abaixo para sua automação, CRM ou checkout e envie uma requisição POST em JSON. <strong>valor</strong> e <strong>id</strong> identificam a venda; cliente, telefone, moeda, atendente, produto, origem, status e timestamp completam o registro.</p>
+                <div class="webhook-field">
+                  <code id="salesWebhookUrl">Carregando URL segura...</code>
+                  <button id="copyWebhookButton" type="button">Copiar</button>
+                </div>
+                <button class="integration-secondary-action" id="regenerateWebhookButton" type="button">Gerar nova URL</button>
+              </div>
+              <div class="integration-card">
+                <h2>Lançamento manual</h2>
+                <p>Se uma venda ainda não chega automaticamente, registre pela aba Transações. O painel salva data, hora, moeda, cliente, atendente e produto.</p>
+                <button class="integration-secondary-action settings-shortcut" data-page="transactions" type="button">Abrir lançamentos</button>
+              </div>
+              <div class="integration-card">
+                <h2>Meta Ads</h2>
+                <p>Conecte sua conta para selecionar as contas de anúncio e acompanhar gastos, imposto, leads ou conversas no mesmo painel.</p>
+                <button class="integration-primary-action" id="connectMetaButton" type="button">Conectar Meta Ads</button>
+                <p class="integration-status" id="metaConnectionStatus">Nenhuma conta conectada.</p>
+                <div class="integration-accounts" id="metaAccountsList"></div>
+              </div>
+              <div class="integration-card team-access-card">
+                <h2>Apps da equipe</h2>
+                <p>Gere um link individual para cada atendente configurado. No primeiro acesso, a conta criada por essa pessoa fica vinculada aos próprios resultados, metas e permissões.</p>
+                <div class="team-access-list" id="attendantAccessLinks">
+                  <p class="integration-status">Carregando equipe...</p>
+                </div>
+              </div>
             </div>
             <h2 class="settings-subtitle">Indicador do dashboard</h2>
             <p class="settings-copy is-compact">Escolha se o dashboard usa conversas iniciadas ou leads vindos do Meta Ads.</p>
@@ -559,7 +603,7 @@
               <article class="panel notification-section sale-notification-section">
                 <div class="notification-section-head">
                   <div>
-                    <h2>Notificações de Venda</h2>
+                    <h2>Notificações de venda</h2>
                     <p>Receba um alerta sempre que uma nova venda for registrada.</p>
                   </div>
                 </div>
@@ -579,7 +623,7 @@
               <article class="panel notification-section report-notification-section">
                 <div class="notification-section-head report-heading">
                   <div>
-                    <h2>Notificações de Relatório</h2>
+                    <h2>Notificações de relatório</h2>
                     <p>Escolha os horários e o estilo dos seus resumos.</p>
                   </div>
                   <button id="enableAllNotifications" type="button">Ativar todos</button>
@@ -619,7 +663,7 @@
           <span>Produtos</span>
         </button>
         <button class="bottom-item" data-page="transactions" type="button" aria-label="Transações">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 6h14v2H5zm0 5h14v2H5zm0 5h14v2H5z"></path></svg>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2V3zm3 4v2h6V7H9zm0 4v2h6v-2H9zm0 4v2h4v-2H9z"></path></svg>
           <span>Transações</span>
         </button>
         <button class="bottom-item" data-page="settings" type="button" aria-label="Ajustes">
@@ -628,9 +672,10 @@
         </button>
       </nav>
     </div>
-    <script src="../config.js?v=55"></script>
+    <script src="../config.js?v=101"></script>
+    <script src="../supabase-provider.js?v=2"></script>
     <script src="../push-client.js?v=63"></script>
-    <script src="../app.js?v=97"></script>
+    <script src="../app.js?v=101"></script>
   </body>
 </html>
 

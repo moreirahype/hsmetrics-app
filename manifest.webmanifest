@@ -1,7 +1,7 @@
 {
-  "name": "Home Studio BI",
-  "short_name": "Home Studio BI",
-  "description": "Dashboard de vendas, anúncios, atendentes e notificações.",
+  "name": "HS Metrics",
+  "short_name": "HS Metrics",
+  "description": "Painel de vendas, lucro, produtos, equipe e tráfego pago.",
   "scope": "./",
   "display": "standalone",
   "background_color": "#0e120d",

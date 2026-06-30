@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#0e120d">
+    <title>Entrar | HS Metrics</title>
+    <link rel="icon" href="./assets/icon-192.png" type="image/png">
+    <link rel="stylesheet" href="./auth.css?v=2">
+  </head>
+  <body>
+    <main class="auth-shell">
+      <section class="auth-brand" aria-label="HS Metrics">
+        <img class="auth-icon" src="./assets/icon-192.png" alt="">
+        <img class="auth-wordmark" src="./assets/hs-metrics-written-logo.webp" alt="HS Metrics">
+        <p>Highly Smart Metrics</p>
+      </section>
+
+      <section class="auth-card">
+        <div class="auth-tabs" role="tablist" aria-label="Acesso">
+          <button class="is-active" type="button" data-auth-mode="signin" role="tab" aria-selected="true">Entrar</button>
+          <button type="button" data-auth-mode="signup" role="tab" aria-selected="false">Criar conta</button>
+        </div>
+
+        <div class="auth-heading">
+          <h1 id="authTitle">Acesse seu painel</h1>
+          <p id="authSubtitle">Entre para acompanhar sua operação.</p>
+        </div>
+
+        <form id="authForm" novalidate>
+          <label class="signup-only" hidden>
+            <span>Seu nome</span>
+            <input id="authName" type="text" autocomplete="name">
+          </label>
+          <label>
+            <span>E-mail</span>
+            <input id="authEmail" type="email" autocomplete="email" required>
+          </label>
+          <label>
+            <span>Senha</span>
+            <input id="authPassword" type="password" autocomplete="current-password" minlength="8" required>
+          </label>
+          <p class="auth-message" id="authMessage" role="status" aria-live="polite"></p>
+          <button class="auth-submit" id="authSubmit" type="submit">Entrar</button>
+        </form>
+
+        <button class="auth-recover" id="authRecover" type="button">Esqueci minha senha</button>
+      </section>
+    </main>
+    <script src="./config.js?v=101"></script>
+    <script src="./supabase-provider.js?v=2"></script>
+    <script src="./auth.js?v=2"></script>
+  </body>
+</html>

@@ -1,4 +1,4 @@
--- Hot Sales - schema inicial Supabase
+-- HS Metrics - schema inicial Supabase
 -- Rode este arquivo no Supabase em SQL Editor > New query.
 
 create extension if not exists pgcrypto;
@@ -32,7 +32,7 @@ create table if not exists public.workspace_members (
 create table if not exists public.subscriptions (
   id uuid primary key default gen_random_uuid(),
   workspace_id uuid not null references public.workspaces(id) on delete cascade,
-  provider text not null default 'kiwify',
+  provider text not null default 'cakto',
   provider_customer_id text,
   provider_subscription_id text,
   status text not null default 'trialing' check (status in ('trialing', 'active', 'past_due', 'canceled', 'expired')),

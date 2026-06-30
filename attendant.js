@@ -6,6 +6,7 @@
     window.HSBI_CONFIG || {}
   );
   const pageConfig = Object.assign({ slug: "", name: "" }, window.HSBI_ATTENDANT_CONFIG || {});
+  const dataProvider = window.HSMData || null;
 
   const state = {
     page: "dashboard",
@@ -51,14 +52,41 @@
     dailyTooltip: document.getElementById("dailyChartTooltip"),
     sidebarToggle: document.getElementById("sidebarToggle"),
     saleNotifications: document.getElementById("saleNotifications"),
-    testNotification: document.getElementById("testNotification")
+    testNotification: document.getElementById("testNotification"),
+    logoutButton: document.getElementById("logoutButton")
   };
 
   const metricAnimationFrames = new Map();
 
-  document.addEventListener("DOMContentLoaded", init);
+  let applicationStarted = false;
+  function startApplication() {
+    if (applicationStarted) return;
+    applicationStarted = true;
+    init().catch((error) => {
+      console.error(error);
+      document.body.classList.remove("auth-pending");
+      setSyncText("Falha ao iniciar");
+    });
+  }
 
-  function init() {
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", startApplication, { once: true });
+    window.setTimeout(() => {
+      if (document.readyState !== "loading") startApplication();
+    }, 0);
+  } else {
+    startApplication();
+  }
+
+  async function init() {
+    if (dataProvider) {
+      const context = await dataProvider.requireAuth();
+      if (!context) return;
+      if (context.role !== "attendant") {
+        location.replace(new URL("../x7p4r9m2/", location.href));
+        return;
+      }
+    }
     setDefaultDates();
     applySidebarPreference();
     bindEvents();
@@ -94,6 +122,12 @@
     els.refreshButton.addEventListener("click", () => refreshData({ applySelection: true, buttonLoading: true }));
     if (els.sidebarToggle) {
       els.sidebarToggle.addEventListener("click", toggleSidebar);
+    }
+    if (els.logoutButton && dataProvider) {
+      els.logoutButton.addEventListener("click", async () => {
+        await dataProvider.signOut();
+        location.replace(new URL("../", location.href));
+      });
     }
     els.search.addEventListener("input", () => {
       state.pageIndex = 1;
@@ -221,6 +255,7 @@
   }
 
   async function fetchAttendantPayload(range) {
+    if (dataProvider) return dataProvider.fetchAttendantPayload(range);
     if (!baseConfig.apiUrl) return buildEmptyPayload();
     const url = new URL(baseConfig.apiUrl);
     url.searchParams.set("action", "attendant");
