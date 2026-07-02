@@ -110,9 +110,10 @@ Deno.serve(async (request) => {
     return Response.json({ ok: false, error: "JSON invalido." }, { status: 400 });
   }
   const requestUrl = new URL(request.url);
-  const suppliedSecret = requestUrl.searchParams.get("secret")
-    || request.headers.get("x-webhook-secret")
-    || String(first(payload, ["secret", "webhook_secret", "fields.secret", "data.secret"]) || "");
+  const querySecret = requestUrl.searchParams.get("secret") || "";
+  const headerSecret = request.headers.get("x-webhook-secret") || "";
+  const bodySecret = String(first(payload, ["secret", "webhook_secret", "fields.secret", "data.secret"]) || "");
+  const suppliedSecret = querySecret || headerSecret || bodySecret;
   if (!suppliedSecret || suppliedSecret !== Deno.env.get("CAKTO_WEBHOOK_SECRET")) {
     return Response.json({ ok: false, error: "Nao autorizado." }, { status: 401 });
   }
@@ -138,7 +139,15 @@ Deno.serve(async (request) => {
       const { data: existing } = await service.from("subscriptions").select("plan").eq("provider_subscription_id", subscriptionId).limit(1);
       plan = existing?.[0]?.plan || "";
     }
-    if (!email || !plan) return Response.json({ ok: false, error: "Cliente ou plano nao identificado." }, { status: 400 });
+    if (!email || !plan) {
+      console.warn("Cakto event without a recognized customer or plan", {
+        event: eventName(payload),
+        hasEmail: Boolean(email),
+        checkoutCode: checkoutCode(payload),
+        offerId: first(payload, ["offer.id", "offer.short_id", "offer_id", "data.offer.id", "data.offer.short_id", "data.offer_id", "order.offer.id", "order.offer_id"]) || null
+      });
+      return Response.json({ ok: false, error: "Cliente ou plano nao identificado." }, { status: 400 });
+    }
 
     const entitlement = {
       email,
