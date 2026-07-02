@@ -103,14 +103,21 @@ function planFrom(payload: Record<string, any>, requestedPlan = "") {
 
 Deno.serve(async (request) => {
   if (request.method !== "POST") return Response.json({ ok: false, error: "Metodo invalido." }, { status: 405 });
+  let payload: Record<string, any>;
+  try {
+    payload = await request.json() as Record<string, any>;
+  } catch {
+    return Response.json({ ok: false, error: "JSON invalido." }, { status: 400 });
+  }
   const requestUrl = new URL(request.url);
-  const suppliedSecret = requestUrl.searchParams.get("secret") || request.headers.get("x-webhook-secret") || "";
+  const suppliedSecret = requestUrl.searchParams.get("secret")
+    || request.headers.get("x-webhook-secret")
+    || String(first(payload, ["secret", "webhook_secret", "fields.secret", "data.secret"]) || "");
   if (!suppliedSecret || suppliedSecret !== Deno.env.get("CAKTO_WEBHOOK_SECRET")) {
     return Response.json({ ok: false, error: "Nao autorizado." }, { status: 401 });
   }
 
   try {
-    const payload = await request.json() as Record<string, any>;
     const email = String(first(payload, ["customer.email", "buyer.email", "email", "data.customer.email", "data.buyer.email"]) || "").trim().toLowerCase();
     const service = createClient(
       Deno.env.get("SUPABASE_URL") || "",
