@@ -28,9 +28,9 @@ PWA multiempresa do HS Metrics. O frontend usa Supabase Auth, Postgres com RLS e
 
 O produto pode ter as três ofertas (Start, Pro e Scale). Cadastre um único webhook para o produto:
 
-`https://szhpfircnpazmbhiuypc.supabase.co/functions/v1/cakto-subscription`
+`https://szhpfircnpazmbhiuypc.supabase.co/functions/v1/cakto-subscription?secret=SEU_SEGREDO`
 
-No campo **Chave secreta do webhook** da Cakto, use exatamente o mesmo valor cadastrado no segredo `CAKTO_WEBHOOK_SECRET` do Supabase.
+O segredo na URL deve ser exatamente o mesmo valor cadastrado em `CAKTO_WEBHOOK_SECRET` no Supabase. O campo **Chave secreta do webhook** da Cakto pode permanecer preenchido, mas a autenticação do HS Metrics usa o segredo aleatório da URL.
 
 Selecione os eventos de compra aprovada, renovação/recorrência, cancelamento, reembolso e chargeback disponíveis no painel. O backend identifica o plano pelo checkout usado:
 
