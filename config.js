@@ -3,7 +3,7 @@ window.HSBI_CONFIG = {
   apiUrl: "",
   supabaseUrl: "https://szhpfircnpazmbhiuypc.supabase.co",
   supabasePublishableKey: "sb_publishable_eesxJKeMaRyIGE6Vohhghg_wqKClqfD",
-  enforceSubscription: false,
+  enforceSubscription: true,
   checkoutUrls: {
     start: "https://pay.cakto.com.br/h4r62s7_952771",
     pro: "https://pay.cakto.com.br/oixhyin",
