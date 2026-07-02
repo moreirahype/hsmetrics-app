@@ -4,3 +4,4 @@ config.local.js
 
 .env.local
 .env*.local
+supabase/.temp/

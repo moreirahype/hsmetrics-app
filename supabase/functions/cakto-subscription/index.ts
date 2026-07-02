@@ -23,23 +23,88 @@ function normalizeStatus(payload: Record<string, any>) {
   return "pending";
 }
 
-function planFrom(payload: Record<string, any>) {
-  const productId = String(first(payload, ["product.id", "product_id", "data.product.id", "data.product_id", "order.product.id", "subscription.product.id"]) || "");
-  const offerId = String(first(payload, ["offer.id", "offer_id", "data.offer.id", "data.offer_id"]) || "");
-  const mapping = new Map([
-    [Deno.env.get("CAKTO_START_PRODUCT_ID") || "", "start"],
-    [Deno.env.get("CAKTO_PRO_PRODUCT_ID") || "", "pro"],
-    [Deno.env.get("CAKTO_SCALE_PRODUCT_ID") || "", "scale"],
-    [Deno.env.get("CAKTO_START_OFFER_ID") || "", "start"],
-    [Deno.env.get("CAKTO_PRO_OFFER_ID") || "", "pro"],
-    [Deno.env.get("CAKTO_SCALE_OFFER_ID") || "", "scale"]
+const VALID_PLANS = new Set(["start", "pro", "scale"]);
+const CHECKOUT_PLAN = new Map([
+  ["h4r62s7", "start"],
+  ["oixhyin", "pro"],
+  ["tqkptgd", "scale"]
+]);
+
+function checkoutCode(payload: Record<string, any>) {
+  const raw = String(first(payload, [
+    "checkoutUrl",
+    "checkout_url",
+    "checkout.url",
+    "data.checkoutUrl",
+    "data.checkout_url",
+    "data.checkout.url",
+    "order.checkoutUrl",
+    "order.checkout_url",
+    "order.checkout.url",
+    "subscription.checkoutUrl",
+    "subscription.checkout_url"
+  ]) || "").trim();
+  if (!raw) return "";
+  try {
+    return new URL(raw).pathname.split("/").filter(Boolean).pop()?.split("_")[0].toLowerCase() || "";
+  } catch {
+    return raw.split("/").filter(Boolean).pop()?.split("_")[0].toLowerCase() || "";
+  }
+}
+
+function planFromAmount(payload: Record<string, any>) {
+  const raw = first(payload, [
+    "baseAmount",
+    "base_amount",
+    "amount",
+    "price",
+    "data.baseAmount",
+    "data.base_amount",
+    "data.amount",
+    "order.baseAmount",
+    "order.base_amount",
+    "order.amount",
+    "offer.price",
+    "data.offer.price"
   ]);
+  const amount = Number(String(raw ?? "").replace(",", "."));
+  if (Math.abs(amount - 49) < 0.01) return "start";
+  if (Math.abs(amount - 97) < 0.01) return "pro";
+  if (Math.abs(amount - 197) < 0.01) return "scale";
+  return "";
+}
+
+function planFrom(payload: Record<string, any>, requestedPlan = "") {
+  const normalizedRequestedPlan = String(requestedPlan || "").trim().toLowerCase();
+  if (VALID_PLANS.has(normalizedRequestedPlan)) return normalizedRequestedPlan;
+
+  const planByCheckout = CHECKOUT_PLAN.get(checkoutCode(payload));
+  if (planByCheckout) return planByCheckout;
+
+  const planByAmount = planFromAmount(payload);
+  if (planByAmount) return planByAmount;
+
+  const productId = String(first(payload, ["product.id", "product_id", "data.product.id", "data.product_id", "order.product.id", "subscription.product.id"]) || "");
+  const offerId = String(first(payload, ["offer.id", "offer.short_id", "offer_id", "data.offer.id", "data.offer.short_id", "data.offer_id", "order.offer.id", "order.offer_id"]) || "");
+  const mapping = new Map<string, string>();
+  [
+    [Deno.env.get("CAKTO_START_PRODUCT_ID"), "start"],
+    [Deno.env.get("CAKTO_PRO_PRODUCT_ID"), "pro"],
+    [Deno.env.get("CAKTO_SCALE_PRODUCT_ID"), "scale"],
+    [Deno.env.get("CAKTO_START_OFFER_ID"), "start"],
+    [Deno.env.get("CAKTO_PRO_OFFER_ID"), "pro"],
+    [Deno.env.get("CAKTO_SCALE_OFFER_ID"), "scale"]
+  ].forEach(([id, plan]) => {
+    if (id) mapping.set(String(id), String(plan));
+  });
+  CHECKOUT_PLAN.forEach((plan, code) => mapping.set(code, plan));
   return mapping.get(productId) || mapping.get(offerId) || "";
 }
 
 Deno.serve(async (request) => {
   if (request.method !== "POST") return Response.json({ ok: false, error: "Metodo invalido." }, { status: 405 });
-  const suppliedSecret = new URL(request.url).searchParams.get("secret") || request.headers.get("x-webhook-secret") || "";
+  const requestUrl = new URL(request.url);
+  const suppliedSecret = requestUrl.searchParams.get("secret") || request.headers.get("x-webhook-secret") || "";
   if (!suppliedSecret || suppliedSecret !== Deno.env.get("CAKTO_WEBHOOK_SECRET")) {
     return Response.json({ ok: false, error: "Nao autorizado." }, { status: 401 });
   }
@@ -47,9 +112,6 @@ Deno.serve(async (request) => {
   try {
     const payload = await request.json() as Record<string, any>;
     const email = String(first(payload, ["customer.email", "buyer.email", "email", "data.customer.email", "data.buyer.email"]) || "").trim().toLowerCase();
-    const plan = planFrom(payload);
-    if (!email || !plan) return Response.json({ ok: false, error: "Cliente ou plano nao identificado." }, { status: 400 });
-
     const service = createClient(
       Deno.env.get("SUPABASE_URL") || "",
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "",
@@ -59,6 +121,17 @@ Deno.serve(async (request) => {
     const subscriptionId = String(first(payload, ["subscription.id", "subscription_id", "data.subscription.id", "data.subscription_id", "order.subscription.id"]) || "");
     const customerId = String(first(payload, ["customer.id", "customer_id", "buyer.id", "data.customer.id"]) || email);
     const periodEnd = first(payload, ["subscription.current_period_end", "subscription.next_payment", "data.subscription.current_period_end", "data.subscription.next_payment", "next_payment_at"]) || null;
+    let plan = planFrom(payload, requestUrl.searchParams.get("plan") || "");
+
+    if (!plan && email) {
+      const { data: pending } = await service.from("pending_entitlements").select("plan").ilike("email", email).limit(1);
+      plan = pending?.[0]?.plan || "";
+    }
+    if (!plan && subscriptionId) {
+      const { data: existing } = await service.from("subscriptions").select("plan").eq("provider_subscription_id", subscriptionId).limit(1);
+      plan = existing?.[0]?.plan || "";
+    }
+    if (!email || !plan) return Response.json({ ok: false, error: "Cliente ou plano nao identificado." }, { status: 400 });
 
     const entitlement = {
       email,

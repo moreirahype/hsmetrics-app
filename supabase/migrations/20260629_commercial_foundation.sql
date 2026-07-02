@@ -145,7 +145,7 @@ begin
     values (created_workspace_id, auth.uid(), 'owner');
 
     insert into public.subscriptions (workspace_id, provider, status, plan)
-    values (created_workspace_id, 'kiwify', 'pending', 'start');
+    values (created_workspace_id, 'cakto', 'pending', 'start');
 
     select * into pending
     from public.pending_entitlements pe

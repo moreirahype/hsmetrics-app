@@ -1,9 +1,12 @@
-const CACHE_NAME = "hsmetrics-sales-app-v59";
+const CACHE_NAME = "hsmetrics-sales-app-v60";
 const ASSETS = [
   "./",
   "./index.html",
   "./auth.css",
   "./auth.js",
+  "./billing.html",
+  "./billing.css",
+  "./billing.js",
   "./supabase-provider.js",
   "./styles.css",
   "./app.js",
