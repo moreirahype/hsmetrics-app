@@ -61,6 +61,41 @@
     return authRequest("recover", { email, redirect_to: redirectTo });
   }
 
+  function consumeAuthRedirect() {
+    if (!isConfigured() || !location.hash || !location.hash.includes("access_token=")) return null;
+    const params = new URLSearchParams(location.hash.slice(1));
+    const accessToken = params.get("access_token");
+    const refreshToken = params.get("refresh_token");
+    if (!accessToken || !refreshToken) return null;
+    const expiresIn = Number(params.get("expires_in") || 3600);
+    storeSession({
+      access_token: accessToken,
+      refresh_token: refreshToken,
+      token_type: params.get("token_type") || "bearer",
+      expires_in: expiresIn,
+      expires_at: Math.floor(Date.now() / 1000) + expiresIn
+    });
+    history.replaceState(null, document.title, location.pathname + location.search);
+    return params.get("type") || "redirect";
+  }
+
+  async function updatePassword(password) {
+    const active = await getSession();
+    if (!active?.access_token) throw new Error("Sessão expirada. Solicite um novo link.");
+    const response = await fetch(`${supabaseUrl}/auth/v1/user`, {
+      method: "PUT",
+      headers: {
+        apikey: publicKey,
+        Authorization: `Bearer ${active.access_token}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ password })
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(payload.msg || payload.error_description || payload.message || "Não foi possível salvar a senha.");
+    return payload;
+  }
+
   async function refreshSession() {
     if (!session?.refresh_token) {
       storeSession(null);
@@ -618,6 +653,8 @@
     signUp,
     signOut,
     requestPasswordReset,
+    consumeAuthRedirect,
+    updatePassword,
     getSession,
     getContext,
     requireAuth,

@@ -128,6 +128,7 @@ Deno.serve(async (request) => {
     const status = normalizeStatus(payload);
     const subscriptionId = String(first(payload, ["subscription.id", "subscription_id", "data.subscription.id", "data.subscription_id", "order.subscription.id"]) || "");
     const customerId = String(first(payload, ["customer.id", "customer_id", "buyer.id", "data.customer.id"]) || email);
+    const customerName = String(first(payload, ["customer.name", "buyer.name", "name", "data.customer.name", "data.buyer.name"]) || "");
     const periodEnd = first(payload, ["subscription.current_period_end", "subscription.next_payment", "data.subscription.current_period_end", "data.subscription.next_payment", "next_payment_at"]) || null;
     let plan = planFrom(payload, requestUrl.searchParams.get("plan") || "");
 
@@ -166,6 +167,7 @@ Deno.serve(async (request) => {
     const { data: profiles, error: profileError } = await service.from("profiles").select("id").ilike("email", email).limit(1);
     if (profileError) throw profileError;
     const userId = profiles?.[0]?.id;
+    let invitationSent = false;
     if (userId) {
       const { data: workspaces, error: workspaceError } = await service.from("workspaces").select("id").eq("owner_id", userId).limit(1);
       if (workspaceError) throw workspaceError;
@@ -183,9 +185,20 @@ Deno.serve(async (request) => {
         }, { onConflict: "workspace_id" });
         if (subscriptionResult.error) throw subscriptionResult.error;
       }
+    } else if (status === "active") {
+      const appUrl = Deno.env.get("APP_URL") || "https://moreirahype.github.io/hsmetrics-app/";
+      const { error: inviteError } = await service.auth.admin.inviteUserByEmail(email, {
+        data: { name: customerName },
+        redirectTo: appUrl
+      });
+      if (inviteError) {
+        console.warn("Could not send HS Metrics access invitation", { email, message: inviteError.message });
+      } else {
+        invitationSent = true;
+      }
     }
 
-    return Response.json({ ok: true, status, plan, event: eventName(payload) });
+    return Response.json({ ok: true, status, plan, invitation_sent: invitationSent, event: eventName(payload) });
   } catch (error) {
     console.error(error);
     return Response.json({ ok: false, error: error instanceof Error ? error.message : "Falha ao atualizar assinatura." }, { status: 500 });

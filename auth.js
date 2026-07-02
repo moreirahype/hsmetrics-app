@@ -5,7 +5,6 @@
   const form = document.getElementById("authForm");
   const email = document.getElementById("authEmail");
   const password = document.getElementById("authPassword");
-  const name = document.getElementById("authName");
   const message = document.getElementById("authMessage");
   const submit = document.getElementById("authSubmit");
   const recover = document.getElementById("authRecover");
@@ -17,26 +16,25 @@
   const inviteFromUrl = new URLSearchParams(location.search).get("invite");
   if (inviteFromUrl) localStorage.setItem(inviteStorageKey, inviteFromUrl);
 
-  document.querySelectorAll("[data-auth-mode]").forEach((button) => {
-    button.addEventListener("click", () => setMode(button.dataset.authMode));
-  });
+  const redirectType = data.consumeAuthRedirect ? data.consumeAuthRedirect() : null;
+  if (redirectType) setMode("set-password");
+
   form.addEventListener("submit", submitAuth);
   recover.addEventListener("click", recoverPassword);
-  redirectExistingSession();
+  if (!redirectType) redirectExistingSession();
 
   function setMode(nextMode) {
-    mode = nextMode === "signup" ? "signup" : "signin";
-    document.querySelectorAll("[data-auth-mode]").forEach((button) => {
-      const active = button.dataset.authMode === mode;
-      button.classList.toggle("is-active", active);
-      button.setAttribute("aria-selected", String(active));
-    });
-    document.querySelectorAll(".signup-only").forEach((element) => { element.hidden = mode !== "signup"; });
-    password.autocomplete = mode === "signup" ? "new-password" : "current-password";
-    title.textContent = mode === "signup" ? "Crie seu acesso" : "Acesse seu painel";
-    subtitle.textContent = mode === "signup" ? "Comece a organizar sua operação em um único lugar." : "Entre para acompanhar sua operação.";
-    submit.textContent = mode === "signup" ? "Criar conta" : "Entrar";
-    recover.hidden = mode === "signup";
+    mode = nextMode === "set-password" ? "set-password" : "signin";
+    const isPasswordSetup = mode === "set-password";
+    email.closest("label").hidden = isPasswordSetup;
+    email.required = !isPasswordSetup;
+    password.autocomplete = isPasswordSetup ? "new-password" : "current-password";
+    title.textContent = isPasswordSetup ? "Defina sua senha" : "Acesse seu painel";
+    subtitle.textContent = isPasswordSetup
+      ? "Crie uma senha para ativar seu acesso ao HS Metrics."
+      : "Entre com o e-mail usado na compra.";
+    submit.textContent = isPasswordSetup ? "Salvar senha e entrar" : "Entrar";
+    recover.hidden = isPasswordSetup;
     setMessage("");
   }
 
@@ -52,16 +50,14 @@
   async function submitAuth(event) {
     event.preventDefault();
     setMessage("");
-    if (!email.validity.valid) return setMessage("Informe um e-mail válido.");
+    if (mode !== "set-password" && !email.validity.valid) return setMessage("Informe um e-mail válido.");
     if (password.value.length < 8) return setMessage("Use uma senha com pelo menos 8 caracteres.");
     setLoading(true);
     try {
-      const result = mode === "signup"
-        ? await data.signUp(email.value.trim(), password.value, name.value.trim())
-        : await data.signIn(email.value.trim(), password.value);
-      if (!result.access_token) {
-        setMessage("Conta criada. Confirme o e-mail para continuar.", true);
-        return;
+      if (mode === "set-password") {
+        await data.updatePassword(password.value);
+      } else {
+        await data.signIn(email.value.trim(), password.value);
       }
       await enterApp();
     } catch (error) {
@@ -96,7 +92,7 @@
     setLoading(true);
     try {
       await data.requestPasswordReset(email.value.trim(), location.origin + location.pathname);
-      setMessage("Enviamos as instruções de recuperação para seu e-mail.", true);
+      setMessage("Enviamos um link para você definir uma nova senha.", true);
     } catch (error) {
       setMessage(translateError(error.message));
     } finally {
@@ -106,7 +102,7 @@
 
   function setLoading(loading) {
     submit.disabled = loading;
-    submit.textContent = loading ? "Aguarde..." : mode === "signup" ? "Criar conta" : "Entrar";
+    submit.textContent = loading ? "Aguarde..." : mode === "set-password" ? "Salvar senha e entrar" : "Entrar";
   }
 
   function setMessage(text, success = false) {
@@ -117,8 +113,8 @@
   function translateError(text) {
     const value = String(text || "");
     if (/invalid login credentials/i.test(value)) return "E-mail ou senha incorretos.";
-    if (/user already registered/i.test(value)) return "Este e-mail ja possui uma conta.";
     if (/email not confirmed/i.test(value)) return "Confirme seu e-mail antes de entrar.";
+    if (/same password/i.test(value)) return "Escolha uma senha diferente da anterior.";
     return value || "Não foi possível concluir agora.";
   }
 })();
