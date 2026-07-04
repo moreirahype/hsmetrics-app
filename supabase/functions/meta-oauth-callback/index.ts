@@ -9,7 +9,7 @@ function redirect(appUrl: string, status: string, detail = "") {
 
 Deno.serve(async (request) => {
   const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
-  const appUrl = Deno.env.get("APP_URL") || "https://moreirahype.github.io/hsmetrics-app/";
+  const appUrl = Deno.env.get("APP_URL") || "https://app.hsmetrics.com.br/";
   const requestUrl = new URL(request.url);
   const state = requestUrl.searchParams.get("state") || "";
   const code = requestUrl.searchParams.get("code") || "";

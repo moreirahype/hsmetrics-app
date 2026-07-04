@@ -186,7 +186,7 @@ Deno.serve(async (request) => {
         if (subscriptionResult.error) throw subscriptionResult.error;
       }
     } else if (status === "active") {
-      const appUrl = Deno.env.get("APP_URL") || "https://moreirahype.github.io/hsmetrics-app/";
+      const appUrl = Deno.env.get("APP_URL") || "https://app.hsmetrics.com.br/";
       const { error: inviteError } = await service.auth.admin.inviteUserByEmail(email, {
         data: { name: customerName },
         redirectTo: appUrl
