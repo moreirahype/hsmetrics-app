@@ -10,11 +10,14 @@
   const recover = document.getElementById("authRecover");
   const title = document.getElementById("authTitle");
   const subtitle = document.getElementById("authSubtitle");
+  const activationPanel = document.getElementById("activationPanel");
   const inviteStorageKey = "hsm-pending-attendant-invite";
   let mode = "signin";
 
-  const inviteFromUrl = new URLSearchParams(location.search).get("invite");
+  const query = new URLSearchParams(location.search);
+  const inviteFromUrl = query.get("invite");
   if (inviteFromUrl) localStorage.setItem(inviteStorageKey, inviteFromUrl);
+  if (activationPanel) activationPanel.hidden = query.get("ativacao") !== "1";
 
   const redirectType = data.consumeAuthRedirect ? data.consumeAuthRedirect() : null;
   if (redirectType) setMode("set-password");
@@ -35,6 +38,7 @@
       : "Entre com o e-mail usado na compra.";
     submit.textContent = isPasswordSetup ? "Salvar senha e entrar" : "Entrar";
     recover.hidden = isPasswordSetup;
+    if (activationPanel && isPasswordSetup) activationPanel.hidden = true;
     setMessage("");
   }
 
@@ -68,7 +72,6 @@
   }
 
   async function enterApp() {
-    const query = new URLSearchParams(location.search);
     const inviteToken = query.get("invite") || localStorage.getItem(inviteStorageKey) || "";
     if (inviteToken) {
       await data.acceptAttendantInvite(inviteToken);

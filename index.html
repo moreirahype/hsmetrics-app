@@ -6,7 +6,7 @@
     <meta name="theme-color" content="#0e120d">
     <title>Entrar | HS Metrics</title>
     <link rel="icon" href="./assets/icon-192.png" type="image/png">
-    <link rel="stylesheet" href="./auth.css?v=3">
+    <link rel="stylesheet" href="./auth.css?v=4">
   </head>
   <body>
     <main class="auth-shell">
@@ -17,6 +17,23 @@
       </section>
 
       <section class="auth-card">
+        <div class="activation-panel" id="activationPanel" hidden>
+          <span class="activation-pill">Compra aprovada</span>
+          <h1>Ative seu acesso</h1>
+          <p>
+            Enviamos um e-mail com o link para você definir sua senha e entrar no HS Metrics.
+            Ele pode levar alguns minutos e também pode cair no spam ou na aba Promoções.
+          </p>
+          <ul>
+            <li>Abra o e-mail enviado pelo HS Metrics/Supabase.</li>
+            <li>Clique no link de ativação.</li>
+            <li>Defina sua senha e entre no painel.</li>
+          </ul>
+          <p class="activation-note">
+            Use o mesmo e-mail informado na compra. Se o link não chegar, preencha seu e-mail abaixo e clique em “Esqueci minha senha” para receber um novo acesso.
+          </p>
+        </div>
+
         <div class="auth-heading">
           <h1 id="authTitle">Acesse seu painel</h1>
           <p id="authSubtitle">Entre com o e-mail usado na compra.</p>
@@ -38,8 +55,8 @@
         <button class="auth-recover" id="authRecover" type="button">Esqueci minha senha</button>
       </section>
     </main>
-    <script src="./config.js?v=102"></script>
-    <script src="./supabase-provider.js?v=3"></script>
-    <script src="./auth.js?v=3"></script>
+    <script src="./config.js?v=103"></script>
+    <script src="./supabase-provider.js?v=4"></script>
+    <script src="./auth.js?v=4"></script>
   </body>
 </html>

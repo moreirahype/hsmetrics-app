@@ -47,6 +47,53 @@ button, input { font: inherit; }
   box-shadow: 0 28px 70px rgba(0, 0, 0, .35);
 }
 
+.activation-panel {
+  margin-bottom: 28px;
+  padding: 22px;
+  border: 1px solid rgba(157, 231, 112, .28);
+  border-radius: 10px;
+  background: linear-gradient(180deg, rgba(157, 231, 112, .08), rgba(17, 26, 17, .72));
+}
+
+.activation-panel[hidden] { display: none; }
+.activation-pill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 0 12px;
+  border: 1px solid rgba(157, 231, 112, .42);
+  border-radius: 999px;
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.activation-panel h1 {
+  margin: 16px 0 10px;
+  font-size: clamp(26px, 3vw, 34px);
+  line-height: 1.1;
+}
+
+.activation-panel p,
+.activation-panel li {
+  color: var(--muted);
+  line-height: 1.55;
+}
+
+.activation-panel p { margin: 0; }
+.activation-panel ul {
+  display: grid;
+  gap: 8px;
+  margin: 18px 0;
+  padding-left: 20px;
+}
+
+.activation-panel li::marker { color: var(--accent); }
+.activation-note {
+  padding-top: 16px;
+  border-top: 1px solid rgba(157, 231, 112, .14);
+}
+
 .auth-tabs {
   display: grid;
   grid-template-columns: 1fr 1fr;
