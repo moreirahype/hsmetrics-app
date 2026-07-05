@@ -1,4 +1,4 @@
-(function () {
+﻿(function () {
   "use strict";
 
   const config = Object.assign(
@@ -9,7 +9,18 @@
 
   const standardPeriods = ["today", "yesterday", "last7", "month", "lastMonth"];
 
+  // Limites comerciais de cada plano, espelhando a landing page.
+  const PLAN_LIMITS = {
+    start: { label: "Start", sales: 300, workspaces: 1, adAccounts: 1, webhooks: 1, teamUsers: 0, teamFeatures: false, reportNotifications: false, export: false },
+    pro: { label: "Pro", sales: 2000, workspaces: 3, adAccounts: 3, webhooks: 3, teamUsers: 3, teamFeatures: true, reportNotifications: true, export: false },
+    scale: { label: "Scale", sales: 10000, workspaces: 10, adAccounts: 10, webhooks: 10, teamUsers: 10, teamFeatures: true, reportNotifications: true, export: true }
+  };
+
   const state = {
+    context: null,
+    plan: "start",
+    workspaceId: "",
+    workspaces: [],
     page: "dashboard",
     period: "today",
     appliedPeriod: "today",
@@ -132,9 +143,23 @@
     regenerateWebhookButton: document.getElementById("regenerateWebhookButton"),
     connectMetaButton: document.getElementById("connectMetaButton"),
     metaConnectionStatus: document.getElementById("metaConnectionStatus"),
-    metaAccountsList: document.getElementById("metaAccountsList")
-    ,attendantAccessLinks: document.getElementById("attendantAccessLinks")
+    metaAccountsList: document.getElementById("metaAccountsList"),
+    attendantAccessLinks: document.getElementById("attendantAccessLinks"),
+    workspaceSwitch: document.getElementById("workspaceSwitch"),
+    workspaceSelect: document.getElementById("workspaceSelect"),
+    planCard: document.getElementById("planCard"),
+    planCardName: document.getElementById("planCardName"),
+    planCardUsage: document.getElementById("planCardUsage"),
+    planCardUsageBar: document.getElementById("planCardUsageBar"),
+    exportCsvButton: document.getElementById("exportCsvButton"),
+    salesWebhookList: document.getElementById("salesWebhookList"),
+    addWebhookButton: document.getElementById("addWebhookButton"),
+    webhookLimitNote: document.getElementById("webhookLimitNote")
   };
+
+  function planLimits() {
+    return PLAN_LIMITS[state.plan] || PLAN_LIMITS.start;
+  }
 
   const metricIds = {
     revenue: "metricRevenue",
@@ -183,7 +208,13 @@
     if (dataProvider) {
       const context = await dataProvider.requireAuth("owner");
       if (!context) return;
+      state.context = context;
+      state.workspaceId = context.workspaceId || "";
+      state.workspaces = Array.isArray(context.workspaces) ? context.workspaces : [];
+      state.plan = PLAN_LIMITS[context.subscription?.plan] ? context.subscription.plan : "start";
       applyWorkspacePreferences(context.workspace || {});
+      renderWorkspaceSwitcher();
+      applyPlanGates();
     }
     applySidebarPreference();
     setDefaultDates();
@@ -202,6 +233,8 @@
 
   function applyWorkspacePreferences(workspace) {
     if (!workspace) return;
+    const workspaceTaxRate = Number(workspace.meta_tax_rate);
+    if (Number.isFinite(workspaceTaxRate) && workspaceTaxRate >= 0) config.metaTaxRate = workspaceTaxRate;
     state.leadMetricSource = workspace.lead_metric_source === "leads" ? "leads" : "conversations";
     state.attendantCostOptions = {
       commission: Boolean(workspace.subtract_attendant_commission),
@@ -214,6 +247,151 @@
 
   function hasBackend() {
     return Boolean(dataProvider || config.apiUrl);
+  }
+
+  function renderWorkspaceSwitcher() {
+    if (!els.workspaceSwitch || !els.workspaceSelect) return;
+    const limits = planLimits();
+    const workspaces = state.workspaces || [];
+    const canCreate = workspaces.length < limits.workspaces;
+    if (workspaces.length <= 1 && !canCreate) {
+      els.workspaceSwitch.hidden = true;
+      return;
+    }
+    els.workspaceSwitch.hidden = workspaces.length <= 1 && limits.workspaces <= 1;
+    els.workspaceSelect.innerHTML = workspaces
+      .map((workspace) => `<option value="${escapeHtml(workspace.id)}" ${workspace.id === state.workspaceId ? "selected" : ""}>${escapeHtml(workspace.name || "Negócio")}</option>`)
+      .join("") + (canCreate ? `<option value="__create">+ Criar novo negócio…</option>` : "");
+    if (els.workspaceSelect.dataset.bound !== "1") {
+      els.workspaceSelect.dataset.bound = "1";
+      els.workspaceSelect.addEventListener("change", async () => {
+        const value = els.workspaceSelect.value;
+        if (value === "__create") {
+          const name = window.prompt("Nome do novo negócio:");
+          els.workspaceSelect.value = state.workspaceId;
+          if (!name || !name.trim()) return;
+          try {
+            const createdId = await dataProvider.createWorkspace(name.trim());
+            dataProvider.setActiveWorkspace(createdId);
+            location.reload();
+          } catch (error) {
+            alert(translatePlanError(error));
+          }
+          return;
+        }
+        if (value && value !== state.workspaceId) {
+          dataProvider.setActiveWorkspace(value);
+          location.reload();
+        }
+      });
+    }
+  }
+
+  function translatePlanError(error) {
+    const message = String(error && error.message || error || "");
+    if (/workspace_limit_reached/.test(message)) return `Seu plano ${planLimits().label} permite até ${planLimits().workspaces} negócio(s). Faça upgrade para adicionar mais.`;
+    if (/team_limit_reached/.test(message)) return planLimits().teamUsers > 0
+      ? `Seu plano ${planLimits().label} permite até ${planLimits().teamUsers} usuário(s) na equipe.`
+      : "O acesso da equipe está disponível a partir do plano Pro.";
+    if (/ad_account_limit_reached/.test(message)) return `Seu plano ${planLimits().label} permite até ${planLimits().adAccounts} conta(s) de anúncio ativa(s).`;
+    if (/monthly_sales_limit_reached/.test(message)) return `Você atingiu o limite de ${integer(planLimits().sales)} vendas deste mês no plano ${planLimits().label}. Faça upgrade para continuar registrando.`;
+    if (/subscription_inactive|subscription_expired/.test(message)) return "Sua assinatura não está ativa. Acesse a página de assinatura para regularizar.";
+    return message || "Não foi possível concluir agora.";
+  }
+
+  function billingUrl() {
+    return new URL("../billing.html", location.href).toString();
+  }
+
+  function applyPlanGates() {
+    const limits = planLimits();
+    document.body.dataset.plan = state.plan;
+    if (!limits.teamFeatures) {
+      lockSection(document.getElementById("page-attendants"), "Pro", "Acompanhamento por atendente", "Veja vendas, faturamento e ticket médio por pessoa da equipe a partir do plano Pro.");
+      lockSection(document.getElementById("page-goals"), "Pro", "Metas da equipe", "Crie metas com prêmios para os atendentes a partir do plano Pro.");
+      lockSection(document.getElementById("page-settings-attendants"), "Pro", "Equipe com comissão e fixo", "Configure comissão, fixo mensal e permissões da equipe a partir do plano Pro.");
+    }
+    if (!limits.reportNotifications) {
+      lockSection(document.querySelector(".report-notification-section"), "Pro", "Notificações de relatório", "Receba resumos automáticos de lucro nos horários que escolher a partir do plano Pro.");
+    }
+    renderPlanCard();
+  }
+
+  function lockSection(section, planName, title, description) {
+    if (!section || section.querySelector(".upgrade-gate")) return;
+    section.classList.add("is-locked");
+    const gate = document.createElement("div");
+    gate.className = "upgrade-gate";
+    gate.innerHTML = `
+      <div class="upgrade-gate-card">
+        <span class="upgrade-pill">Plano ${escapeHtml(planName)}</span>
+        <h2>${escapeHtml(title)}</h2>
+        <p>${escapeHtml(description)}</p>
+        <a class="upgrade-button" href="${escapeHtml(billingUrl())}">Fazer upgrade</a>
+      </div>
+    `;
+    section.append(gate);
+  }
+
+  function renderPlanCard() {
+    if (!els.planCard) return;
+    const limits = planLimits();
+    const now = new Date();
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    const used = (state.transactions || []).filter((item) =>
+      isApprovedTransaction(item) && item.timestamp >= monthStart && item.timestamp <= now
+    ).length;
+    const ratio = Math.min(1, used / Math.max(1, limits.sales));
+    els.planCard.hidden = false;
+    if (els.planCardName) els.planCardName.textContent = `Plano ${limits.label}`;
+    if (els.planCardUsage) els.planCardUsage.textContent = `${integer(used)} / ${integer(limits.sales)} vendas no mês`;
+    if (els.planCardUsageBar) {
+      els.planCardUsageBar.style.width = `${Math.max(3, ratio * 100)}%`;
+      els.planCardUsageBar.classList.toggle("is-warning", ratio >= 0.8);
+    }
+  }
+
+  function isApprovedTransaction(item) {
+    return !item || !item.status || item.status === "approved";
+  }
+
+  function exportTransactionsCsv() {
+    if (!planLimits().export) {
+      if (window.confirm("A exportação de dados está disponível no plano Scale. Quer conhecer os planos?")) {
+        location.assign(billingUrl());
+      }
+      return;
+    }
+    const rows = state.filteredTransactions || [];
+    if (!rows.length) {
+      showNotificationSavedToast("Nenhuma transação no período");
+      return;
+    }
+    const header = ["Data", "Hora", "Cliente", "Telefone", "Atendente", "Produto", "Origem", "Status", "Moeda original", "Valor original", "Valor (BRL)"];
+    const escapeCsv = (value) => `"${String(value == null ? "" : value).replace(/"/g, '""')}"`;
+    const lines = rows.map((item) => [
+      formatIsoDateBr(item.data),
+      item.hora,
+      item.pagador,
+      formatPhone(item.telefone),
+      item.atendente,
+      item.produto || "Sem produto",
+      item.origem || "",
+      item.status === "refunded" ? "Reembolsada" : item.status === "chargeback" ? "Chargeback" : "Aprovada",
+      item.moedaOriginal || "BRL",
+      decimal(item.valorOriginal || item.valor || 0),
+      decimal(item.valor || 0)
+    ].map(escapeCsv).join(";"));
+    const csv = "﻿" + header.map(escapeCsv).join(";") + "\r\n" + lines.join("\r\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = `hsmetrics-transacoes-${toIsoDate(new Date())}.csv`;
+    document.body.append(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(link.href);
+    showNotificationSavedToast("CSV exportado");
   }
 
   function bindEvents() {
@@ -263,6 +441,12 @@
     }
     if (els.regenerateWebhookButton) {
       els.regenerateWebhookButton.addEventListener("click", regenerateSalesWebhookUrl);
+    }
+    if (els.addWebhookButton) {
+      els.addWebhookButton.addEventListener("click", addSalesWebhookFromButton);
+    }
+    if (els.exportCsvButton) {
+      els.exportCsvButton.addEventListener("click", exportTransactionsCsv);
     }
     if (els.connectMetaButton) {
       els.connectMetaButton.addEventListener("click", connectMetaAds);
@@ -409,7 +593,7 @@
         await syncOwnerPush(true);
         const pushClient = await ensurePushClient();
         const preview = buildReportPreview();
-        await pushClient.test("owner", {
+        await pushClient.test(ownerPushAudience(), {
           title: preview.title,
           body: preview.body,
           url: `${location.origin}${location.pathname}#notifications`
@@ -445,14 +629,14 @@
   }
 
   async function initializeIntegrations() {
-    if (!dataProvider || !els.salesWebhookUrl) return;
+    if (!dataProvider || (!els.salesWebhookList && !els.salesWebhookUrl)) return;
     try {
-      const [webhookUrl, metaIntegration, adAccounts] = await Promise.all([
-        dataProvider.getSalesWebhookUrl(),
+      const [webhooks, metaIntegration, adAccounts] = await Promise.all([
+        dataProvider.getSalesWebhooks(),
         dataProvider.getIntegrationStatus("meta"),
         dataProvider.getAdAccounts()
       ]);
-      els.salesWebhookUrl.textContent = webhookUrl;
+      renderSalesWebhooks(webhooks);
       if (els.metaConnectionStatus) {
         const count = Number(metaIntegration?.settings?.account_count || 0);
         els.metaConnectionStatus.textContent = metaIntegration?.status === "active"
@@ -463,12 +647,96 @@
       renderAttendantAccessLinks();
     } catch (error) {
       console.error(error);
-      els.salesWebhookUrl.textContent = "Não foi possível gerar a URL agora.";
+      if (els.salesWebhookList) {
+        els.salesWebhookList.innerHTML = `<p class="integration-status">Não foi possível carregar os webhooks agora.</p>`;
+      }
+    }
+  }
+
+  function renderSalesWebhooks(webhooks) {
+    if (!els.salesWebhookList) return;
+    const limits = planLimits();
+    const list = Array.isArray(webhooks) ? webhooks : [];
+    els.salesWebhookList.innerHTML = list.map((webhook) => `
+      <div class="webhook-row" data-token="${escapeHtml(webhook.token)}">
+        <div class="webhook-row-info">
+          <strong>${escapeHtml(webhook.label)}</strong>
+          <code>${escapeHtml(webhook.url)}</code>
+        </div>
+        <div class="webhook-row-actions">
+          <button type="button" data-webhook-copy="${escapeHtml(webhook.token)}">Copiar</button>
+          <button type="button" data-webhook-regenerate="${escapeHtml(webhook.token)}" title="Gerar nova URL para este webhook">Nova URL</button>
+          ${list.length > 1 ? `<button type="button" class="is-danger" data-webhook-remove="${escapeHtml(webhook.token)}">Remover</button>` : ""}
+        </div>
+      </div>
+    `).join("") || `<p class="integration-status">Nenhum webhook configurado.</p>`;
+    if (els.addWebhookButton) {
+      els.addWebhookButton.hidden = false;
+      els.addWebhookButton.disabled = list.length >= limits.webhooks;
+    }
+    if (els.webhookLimitNote) {
+      els.webhookLimitNote.textContent = `Seu plano ${limits.label} permite ${limits.webhooks === 1 ? "1 webhook" : `até ${limits.webhooks} webhooks`} de venda (${list.length} em uso).`;
+    }
+    const urlByToken = new Map(list.map((item) => [item.token, item.url]));
+    els.salesWebhookList.querySelectorAll("[data-webhook-copy]").forEach((button) => {
+      button.addEventListener("click", async () => {
+        const url = urlByToken.get(button.dataset.webhookCopy) || "";
+        if (!url) return;
+        await navigator.clipboard.writeText(url);
+        showNotificationSavedToast("URL copiada");
+      });
+    });
+    els.salesWebhookList.querySelectorAll("[data-webhook-regenerate]").forEach((button) => {
+      button.addEventListener("click", async () => {
+        if (!window.confirm("Gerar uma nova URL? A URL atual deste webhook deixará de aceitar vendas.")) return;
+        button.disabled = true;
+        try {
+          renderSalesWebhooks(await dataProvider.regenerateSalesWebhook(button.dataset.webhookRegenerate));
+          showNotificationSavedToast("Nova URL gerada");
+        } catch (error) {
+          alert(translatePlanError(error));
+          button.disabled = false;
+        }
+      });
+    });
+    els.salesWebhookList.querySelectorAll("[data-webhook-remove]").forEach((button) => {
+      button.addEventListener("click", async () => {
+        if (!window.confirm("Remover este webhook? A URL dele deixará de aceitar vendas.")) return;
+        button.disabled = true;
+        try {
+          renderSalesWebhooks(await dataProvider.removeSalesWebhook(button.dataset.webhookRemove));
+          showNotificationSavedToast("Webhook removido");
+        } catch (error) {
+          alert(translatePlanError(error));
+          button.disabled = false;
+        }
+      });
+    });
+  }
+
+  async function addSalesWebhookFromButton() {
+    const limits = planLimits();
+    const current = els.salesWebhookList ? els.salesWebhookList.querySelectorAll(".webhook-row").length : 0;
+    if (current >= limits.webhooks) {
+      alert(`Seu plano ${limits.label} permite até ${limits.webhooks} webhook(s) de venda. Faça upgrade para adicionar mais.`);
+      return;
+    }
+    const label = window.prompt("Nome do webhook (ex.: Kiwify, Zapdata):", `Webhook ${current + 1}`);
+    if (label == null) return;
+    els.addWebhookButton.disabled = true;
+    try {
+      renderSalesWebhooks(await dataProvider.addSalesWebhook(label));
+      showNotificationSavedToast("Webhook criado");
+    } catch (error) {
+      alert(translatePlanError(error));
+    } finally {
+      els.addWebhookButton.disabled = false;
     }
   }
 
   function renderMetaAccounts(accounts) {
     if (!els.metaAccountsList) return;
+    const limits = planLimits();
     els.metaAccountsList.innerHTML = (accounts || []).map((account) => `
       <label class="integration-account-row">
         <span>${escapeHtml(account.name || account.external_id)}</span>
@@ -478,15 +746,27 @@
         </span>
       </label>
     `).join("");
+    if ((accounts || []).length) {
+      const note = document.createElement("p");
+      note.className = "integration-status";
+      note.textContent = `Seu plano ${limits.label} permite ${limits.adAccounts === 1 ? "1 conta de anúncio ativa" : `até ${limits.adAccounts} contas de anúncio ativas`}.`;
+      els.metaAccountsList.append(note);
+    }
+    const countActive = () => els.metaAccountsList.querySelectorAll("[data-meta-account]:checked").length;
     els.metaAccountsList.querySelectorAll("[data-meta-account]").forEach((input) => {
       input.addEventListener("change", async () => {
+        if (input.checked && countActive() > limits.adAccounts) {
+          input.checked = false;
+          alert(`Seu plano ${limits.label} permite até ${limits.adAccounts} conta(s) de anúncio ativa(s). Desative outra conta ou faça upgrade.`);
+          return;
+        }
         input.disabled = true;
         try {
           await dataProvider.setAdAccountActive(input.dataset.metaAccount, input.checked);
           showNotificationSavedToast("Conta atualizada");
         } catch (error) {
           input.checked = !input.checked;
-          alert(error.message);
+          alert(translatePlanError(error));
         } finally {
           input.disabled = false;
         }
@@ -496,19 +776,32 @@
 
   function renderAttendantAccessLinks() {
     if (!els.attendantAccessLinks) return;
+    const limits = planLimits();
+    if (!limits.teamFeatures || limits.teamUsers < 1) {
+      els.attendantAccessLinks.innerHTML = `
+        <p class="integration-status">O acesso individual da equipe está disponível a partir do plano Pro.</p>
+        <a class="integration-secondary-action upgrade-inline-link" href="${escapeHtml(billingUrl())}">Fazer upgrade</a>
+      `;
+      return;
+    }
     const attendants = (state.attendantConfigs || []).filter((item) => item.id);
     if (!attendants.length) {
       els.attendantAccessLinks.innerHTML = `<p class="integration-status">Cadastre um atendente para gerar o acesso individual.</p>`;
       return;
     }
+    const linkedCount = attendants.filter((item) => item.userId).length;
     els.attendantAccessLinks.innerHTML = attendants.map((attendant) => `
       <div class="team-access-row">
         <span><strong>${escapeHtml(attendant.name || attendant.slug)}</strong><small>${attendant.userId ? "Acesso vinculado" : "Aguardando primeiro acesso"}</small></span>
-        <button type="button" data-create-attendant-invite="${escapeHtml(attendant.id)}">${attendant.userId ? "Novo link" : "Gerar link"}</button>
+        <button type="button" data-create-attendant-invite="${escapeHtml(attendant.id)}" data-linked="${attendant.userId ? "1" : "0"}">${attendant.userId ? "Novo link" : "Gerar link"}</button>
       </div>
-    `).join("");
+    `).join("") + `<p class="integration-status">${integer(linkedCount)} de ${integer(limits.teamUsers)} acessos do plano ${limits.label} em uso.</p>`;
     els.attendantAccessLinks.querySelectorAll("[data-create-attendant-invite]").forEach((button) => {
       button.addEventListener("click", async () => {
+        if (button.dataset.linked !== "1" && linkedCount >= limits.teamUsers) {
+          alert(`Seu plano ${limits.label} permite até ${limits.teamUsers} usuário(s) na equipe. Faça upgrade para liberar mais acessos.`);
+          return;
+        }
         button.disabled = true;
         const label = button.textContent;
         button.textContent = "Gerando...";
@@ -517,7 +810,7 @@
           await navigator.clipboard.writeText(invite.url);
           showNotificationSavedToast("Link da equipe copiado");
         } catch (error) {
-          alert(error.message || "Não foi possível gerar o link agora.");
+          alert(translatePlanError(error) || "Não foi possível gerar o link agora.");
         } finally {
           button.disabled = false;
           button.textContent = label;
@@ -841,37 +1134,6 @@
     closeTransactionEditor();
     showNotificationSavedToast("Rascunho salvo");
     render();
-    return;
-    const payload = new FormData();
-    payload.set("action", "updateTransaction");
-    payload.set("id", id);
-    payload.set("data", els.transactionEditDate.value);
-    payload.set("hora", els.transactionEditTime.value);
-    payload.set("pagador", els.transactionEditPayer.value.trim() || "Sem cliente");
-    payload.set("telefone", els.transactionEditPhone ? els.transactionEditPhone.value.trim() : transaction.telefone || "");
-    payload.set("atendente", els.transactionEditAttendant.value.trim() || "Sem atendente");
-    payload.set("produto", els.transactionEditProduct ? els.transactionEditProduct.value || "" : transaction.produto || "");
-    payload.set("moeda_original", currency);
-    payload.set("valor_original", String(value).replace(".", ","));
-    payload.set("moeda", "BRL");
-    payload.set("valor", String(currency === "BRL" ? value : convertToBrl(value, currency)).replace(".", ","));
-    payload.set("mutation_id", createMutationId("edit"));
-
-    setTransactionEditLoading(true);
-    try {
-      await submitMutation(payload);
-      closeTransactionEditor();
-      await refreshData({ applySelection: true });
-    } catch (error) {
-      console.error(error);
-      if (error && error.message) {
-        alert(error.message);
-        return;
-      }
-      alert("Não foi possível salvar a edição agora.");
-    } finally {
-      setTransactionEditLoading(false);
-    }
   }
 
   async function submitMutation(payload) {
@@ -1192,7 +1454,9 @@
       valor: convertedValue,
       atendente: item.atendente || item.attendant || "Sem atendente",
       origem: item.origem || item.source || "",
-      produto: item.produto || item.product || item.productName || item.product_name || ""
+      produto: item.produto || item.product || item.productName || item.product_name || "",
+      status: ["refunded", "chargeback"].includes(String(item.status || "").toLowerCase()) ? String(item.status).toLowerCase() : "approved",
+      refundedAmount: parseMoneyValue(item.refunded_amount_brl || item.refundedAmount || 0)
     };
   }
 
@@ -1232,9 +1496,12 @@
     renderManualSaleOptions();
     state.filteredTransactions = getFilteredTransactions();
     renderDashboardFilters();
-    state.dashboardTransactions = getDashboardTransactions();
+    const dashboardRows = getDashboardTransactions();
+    state.dashboardTransactions = dashboardRows.filter(isApprovedTransaction);
+    state.dashboardRefunds = dashboardRows.filter((item) => !isApprovedTransaction(item));
     state.meta = getMetaForCurrentPeriod();
-    state.metrics = computeMetrics(state.dashboardTransactions);
+    state.metrics = computeMetrics(state.dashboardTransactions, state.dashboardRefunds);
+    renderPlanCard();
     renderMetrics();
     renderSalesChart();
     if (state.page === "dashboard" && state.animateDashboard) {
@@ -1557,7 +1824,7 @@
       && (state.filters.product === "all" || normalizeFilterValue(item.produto || "Sem produto") === state.filters.product);
   }
 
-  function computeMetrics(transactions) {
+  function computeMetrics(transactions, refunds = []) {
     const revenue = sum(transactions.map((item) => item.valor));
     const sales = transactions.length;
     const ads = Number(state.meta.spend || 0);
@@ -1568,7 +1835,14 @@
     const profit = revenue - totalSpend - productCosts - attendantCosts;
     const leads = getLeadBase(state.meta);
     const conversionSales = countFrontConversionSales(transactions, state.transactions);
+    const refundedRows = refunds.filter((item) => item.status === "refunded");
+    const chargebackRows = refunds.filter((item) => item.status === "chargeback");
+    const totalAttempts = sales + refunds.length;
+    const refundedSales = sum(refundedRows.map((item) => item.refundedAmount || item.valor || 0));
     return {
+      refundedSales,
+      refundRate: totalAttempts > 0 ? refundedRows.length / totalAttempts : 0,
+      chargebackRate: totalAttempts > 0 ? chargebackRows.length / totalAttempts : 0,
       revenue,
       ads,
       tax,
@@ -1593,6 +1867,7 @@
     const sheetFrontProducts = Array.from(state.costs.values()).filter((item) => item.front).map((item) => normalizeFilterValue(item.product));
     const frontProducts = new Set(sheetFrontProducts.length ? sheetFrontProducts : state.frontProducts || []);
     return (allTransactions || [])
+      .filter(isApprovedTransaction)
       .filter((item) => !isGalleryTransaction(item))
       .filter((item) => !frontProducts.size || frontProducts.has(normalizeFilterValue(item.produto || "Sem produto")))
       .slice()
@@ -1915,7 +2190,8 @@
     const range = getDateRange(period);
     const series = buildDayLabels(range.start, range.end).map((label, index) => {
       const sales = state.transactions.filter((item) => {
-        return item.timestamp >= startOfDay(range.start)
+        return isApprovedTransaction(item)
+          && item.timestamp >= startOfDay(range.start)
           && item.timestamp <= endOfDay(range.end)
           && matchesDashboardFilters(item)
           && toIsoDate(item.timestamp) === label.key;
@@ -2017,7 +2293,7 @@
   function getAttendantRows() {
     const range = getDateRange();
     const transactions = state.transactions.filter(
-      (item) => item.timestamp >= startOfDay(range.start) && item.timestamp <= endOfDay(range.end)
+      (item) => isApprovedTransaction(item) && item.timestamp >= startOfDay(range.start) && item.timestamp <= endOfDay(range.end)
     );
     const map = new Map();
     transactions.forEach((item) => {
@@ -2092,7 +2368,7 @@
 
   function getProductRows() {
     const map = new Map();
-    state.filteredTransactions.forEach((item) => {
+    state.filteredTransactions.filter(isApprovedTransaction).forEach((item) => {
       const name = String(item.produto || "Sem produto").trim() || "Sem produto";
       const key = normalizeFilterValue(name);
       const row = map.get(key) || { name, sales: 0, revenue: 0 };
@@ -2693,6 +2969,12 @@
       visible.forEach((item) => {
         const tr = document.createElement("tr");
         if (item.isDraft) tr.classList.add("is-draft-row");
+        if (!isApprovedTransaction(item)) tr.classList.add("is-refunded-row");
+        const statusBadge = item.status === "refunded"
+          ? '<small class="status-label is-refunded">Reembolsada</small>'
+          : item.status === "chargeback"
+            ? '<small class="status-label is-chargeback">Chargeback</small>'
+            : "";
         tr.innerHTML = `
           <td>${formatIsoDateBr(item.data)}</td>
           <td>${escapeHtml(item.hora)}</td>
@@ -2702,6 +2984,7 @@
           <td>${escapeHtml(item.moedaOriginal)}</td>
           <td class="transaction-value-cell">
             <span>${formatOriginalValue(item)}</span>
+            ${statusBadge}
             ${item.isDraft ? '<small class="draft-label">Rascunho</small>' : ""}
             <button class="transaction-edit-button" type="button" data-id="${escapeHtml(item.id)}" aria-label="Editar transação">
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 17.25V20h2.75L17.8 8.95l-2.75-2.75L4 17.25zm15.92-11.17a1 1 0 0 0 0-1.42l-.58-.58a1 1 0 0 0-1.42 0l-1.16 1.16 2.75 2.75 1.41-1.41z"></path></svg>
@@ -2877,9 +3160,14 @@
       : "detailed";
   }
 
+  function ownerPushAudience() {
+    return state.workspaceId ? `owner-${state.workspaceId}` : "owner";
+  }
+
   async function syncOwnerPush(force) {
     const pushClient = await ensurePushClient();
-    const times = notificationTimes.filter((time) => state.notifications[time]);
+    const allowReports = planLimits().reportNotifications;
+    const times = allowReports ? notificationTimes.filter((time) => state.notifications[time]) : [];
     const preferences = {
       enabled: isSaleNotificationsEnabled() || times.length > 0,
       times,
@@ -2887,9 +3175,12 @@
       saleShowAttendant: state.notifications.saleShowAttendant !== false,
       reportStyle: getReportStyle()
     };
+    if (dataProvider && dataProvider.saveNotificationPreferences) {
+      dataProvider.saveNotificationPreferences("owner", preferences).catch(console.error);
+    }
     return force
-      ? pushClient.sync("owner", preferences)
-      : pushClient.update("owner", preferences);
+      ? pushClient.sync(ownerPushAudience(), preferences)
+      : pushClient.update(ownerPushAudience(), preferences);
   }
 
   function showNotificationSavedToast(message = "Alteração salva") {
@@ -2929,7 +3220,7 @@
         return;
       }
       const script = document.createElement("script");
-      script.src = "../push-client.js?v=63";
+      script.src = "../push-client.js?v=64";
       script.dataset.pushClient = "dynamic";
       script.onload = () => window.HSBIPush
         ? resolve(window.HSBIPush)
@@ -3015,7 +3306,7 @@
 
   function registerServiceWorker() {
     if ("serviceWorker" in navigator) {
-      navigator.serviceWorker.register("../sw.js?v=63").then((registration) => registration.update()).catch(console.error);
+      navigator.serviceWorker.register("../sw.js?v=64").then((registration) => registration.update()).catch(console.error);
     }
   }
 

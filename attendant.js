@@ -1,4 +1,4 @@
-(function () {
+﻿(function () {
   "use strict";
 
   const baseConfig = Object.assign(
@@ -95,9 +95,6 @@
     registerServiceWorker();
     refreshData();
     window.setInterval(() => refreshData(), baseConfig.autoRefreshMinutes * 60 * 1000);
-    if (typeof Notification !== "undefined" && Notification.permission === "granted" && state.notificationsEnabled) {
-      window.setTimeout(() => syncAttendantPush().catch(console.error), 1000);
-    }
   }
 
   function bindEvents() {
@@ -158,9 +155,9 @@
       try {
         await syncAttendantPush(true);
         const pushClient = await ensurePushClient();
-        await pushClient.test("sheila", {
-          title: "\uD83D\uDCB0 Venda Realizada!",
-          body: "",
+        await pushClient.test(attendantPushAudience(), {
+          title: "\uD83D\uDCB0 Venda realizada!",
+          body: "Valor: R$ 99,90 \u2022 Comiss\u00E3o: R$ 9,99",
           url: `${location.origin}${location.pathname}#transactions`
         });
       } catch (error) {
@@ -241,7 +238,11 @@
   }
 
   function applyPayload(payload, replace) {
-    if (payload.attendant) state.attendant = Object.assign({}, state.attendant, payload.attendant);
+    if (payload.attendant) {
+      state.attendant = Object.assign({}, state.attendant, payload.attendant);
+      if (state.attendant.nome) document.title = `HS Metrics — ${state.attendant.nome}`;
+      maybeAutoSyncPush();
+    }
     if (Array.isArray(payload.goals)) state.goals = payload.goals.map(normalizeGoal);
     const sales = (payload.transactions || []).map(normalizeSale);
     if (replace) {
@@ -644,7 +645,7 @@
         timestamp,
         data: toIsoDate(timestamp),
         hora: "00:00",
-      pagador: "Lucas Moreira",
+        pagador: "Fixo diário",
         value: daily,
         gross: 0,
         commissionRate: 0
@@ -770,15 +771,37 @@
     return Math.max(1, Math.ceil(state.displayTransactions.length / baseConfig.rowsPerPage));
   }
 
+  function attendantPushAudience() {
+    return state.attendant.id ? `att-${state.attendant.id}` : "";
+  }
+
+  let autoPushSynced = false;
+  function maybeAutoSyncPush() {
+    if (autoPushSynced || !state.attendant.id) return;
+    if (typeof Notification === "undefined" || Notification.permission !== "granted" || !state.notificationsEnabled) return;
+    autoPushSynced = true;
+    syncAttendantPush().catch(console.error);
+  }
+
   async function syncAttendantPush(force) {
+    const audience = attendantPushAudience();
+    if (!audience) throw new Error("Aguarde os dados carregarem e tente novamente.");
     const pushClient = await ensurePushClient();
     const preferences = {
       enabled: state.notificationsEnabled,
+      salesEnabled: state.notificationsEnabled,
       times: []
     };
+    if (dataProvider && dataProvider.saveNotificationPreferences) {
+      dataProvider.saveNotificationPreferences("attendant", {
+        salesEnabled: state.notificationsEnabled,
+        times: [],
+        reportStyle: "detailed"
+      }).catch(console.error);
+    }
     return force
-      ? pushClient.sync("sheila", preferences)
-      : pushClient.update("sheila", preferences);
+      ? pushClient.sync(audience, preferences)
+      : pushClient.update(audience, preferences);
   }
 
   function ensurePushClient() {
@@ -791,7 +814,7 @@
         return;
       }
       const script = document.createElement("script");
-      script.src = "../push-client.js?v=62";
+      script.src = "../push-client.js?v=64";
       script.dataset.pushClient = "dynamic";
       script.onload = () => window.HSBIPush
         ? resolve(window.HSBIPush)
@@ -803,7 +826,7 @@
 
   function registerServiceWorker() {
     if ("serviceWorker" in navigator) {
-      navigator.serviceWorker.register("../sw.js?v=63").then((registration) => registration.update()).catch(console.error);
+      navigator.serviceWorker.register("../sw.js?v=64").then((registration) => registration.update()).catch(console.error);
     }
   }
 
@@ -1100,11 +1123,12 @@
   }
 
   function loadNotificationPref() {
-    return localStorage.getItem(`hsbi-sale-notifications-${pageConfig.slug}`) === "1";
+    return localStorage.getItem("hsbi-sale-notifications-attendant") === "1"
+      || localStorage.getItem(`hsbi-sale-notifications-${pageConfig.slug}`) === "1";
   }
 
   function saveNotificationPref() {
-    localStorage.setItem(`hsbi-sale-notifications-${pageConfig.slug}`, state.notificationsEnabled ? "1" : "0");
+    localStorage.setItem("hsbi-sale-notifications-attendant", state.notificationsEnabled ? "1" : "0");
   }
 })();
 

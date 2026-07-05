@@ -55,13 +55,30 @@ Deno.serve(async (request) => {
     }, { onConflict: "workspace_id,provider" });
     if (secretError) throw secretError;
 
-    const accounts = (accountsPayload.data || []).map((account: Record<string, unknown>) => ({
-      workspace_id: storedState.workspace_id,
-      provider: "meta",
-      external_id: String(account.id || ""),
-      name: String(account.name || account.id || "Conta Meta Ads"),
-      active: Number(account.account_status || 0) === 1
-    })).filter((account: Record<string, unknown>) => account.external_id);
+    // Respeita o limite de contas ativas do plano (Start 1, Pro 3, Scale 10).
+    const { data: limitRows } = await service.rpc("owner_subscription", { target_workspace_id: storedState.workspace_id });
+    const subscription = Array.isArray(limitRows) ? limitRows[0] : limitRows;
+    const planLimits: Record<string, number> = { start: 1, pro: 3, scale: 10 };
+    const accountLimit = planLimits[String(subscription?.plan || "start")] || 1;
+    const { count: alreadyActive } = await service
+      .from("ad_accounts")
+      .select("id", { count: "exact", head: true })
+      .eq("workspace_id", storedState.workspace_id)
+      .eq("active", true);
+    let activeBudget = Math.max(0, accountLimit - Number(alreadyActive || 0));
+
+    const accounts = (accountsPayload.data || []).map((account: Record<string, unknown>) => {
+      const wantsActive = Number(account.account_status || 0) === 1;
+      const active = wantsActive && activeBudget > 0;
+      if (active) activeBudget -= 1;
+      return {
+        workspace_id: storedState.workspace_id,
+        provider: "meta",
+        external_id: String(account.id || ""),
+        name: String(account.name || account.id || "Conta Meta Ads"),
+        active
+      };
+    }).filter((account: Record<string, unknown>) => account.external_id);
     if (accounts.length) {
       const { error: accountsError } = await service.from("ad_accounts").upsert(accounts, { onConflict: "workspace_id,provider,external_id" });
       if (accountsError) throw accountsError;

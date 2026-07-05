@@ -210,34 +210,28 @@ button {
 
 .sidebar-toggle span {
   position: relative;
-  width: 22px;
-  height: 18px;
+  width: 20px;
+  height: 14px;
 }
 
 .sidebar-toggle span::before,
 .sidebar-toggle span::after {
   content: "";
   position: absolute;
-  top: 50%;
-  transform: translateY(-50%);
+  left: 0;
+  width: 100%;
+  height: 2px;
+  border-radius: 999px;
+  background: currentColor;
 }
 
 .sidebar-toggle span::before {
-  left: 2px;
-  width: 2px;
-  height: 15px;
-  border-radius: 999px;
-  background: currentColor;
-  opacity: 0.72;
+  top: 0;
+  box-shadow: 0 6px 0 currentColor;
 }
 
 .sidebar-toggle span::after {
-  left: 8px;
-  width: 9px;
-  height: 9px;
-  border-top: 2px solid currentColor;
-  border-left: 2px solid currentColor;
-  transform: translateY(-50%) rotate(-45deg);
+  bottom: 0;
 }
 
 .nav-item {
@@ -308,7 +302,8 @@ body.sidebar-collapsed .nav-item:hover {
   color: var(--accent);
 }
 
-body.sidebar-collapsed .nav-item span {
+body.sidebar-collapsed .nav-item span,
+body.sidebar-collapsed .logout-button span {
   position: absolute;
   width: 1px;
   height: 1px;
@@ -318,8 +313,9 @@ body.sidebar-collapsed .nav-item span {
   pointer-events: none;
 }
 
-body.sidebar-collapsed .sidebar-toggle span {
-  transform: scaleX(-1);
+body.sidebar-collapsed .logout-button {
+  justify-content: center;
+  padding-inline: 0;
 }
 
 body.sidebar-collapsed .sidebar-toggle {
@@ -3067,6 +3063,330 @@ tr:hover .transaction-edit-button,
 
   .bottom-item.is-active {
     color: var(--accent);
+  }
+}
+
+/* ===== Seletor de negócios (multi-projeto) ===== */
+.workspace-switch {
+  margin-top: 18px;
+}
+
+.workspace-switch label span {
+  color: var(--muted);
+  font-size: var(--text-xs);
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+
+.workspace-switch select {
+  min-height: 40px;
+  font-size: var(--text-sm);
+}
+
+body.sidebar-collapsed .workspace-switch {
+  display: none;
+}
+
+/* ===== Cartão do plano na sidebar ===== */
+.plan-card {
+  display: grid;
+  gap: 7px;
+  margin-top: 18px;
+  padding: 13px 14px;
+  border: 1px solid rgba(var(--accent-rgb), 0.16);
+  border-radius: var(--radius);
+  background: rgba(var(--accent-rgb), 0.05);
+}
+
+.plan-card strong {
+  color: var(--accent);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-bold);
+}
+
+.plan-card span {
+  color: var(--muted);
+  font-size: var(--text-xs);
+}
+
+.plan-usage-track {
+  height: 5px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(var(--accent-rgb), 0.14);
+}
+
+.plan-usage-track span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--accent);
+  transition: width 320ms ease;
+}
+
+.plan-usage-track span.is-warning {
+  background: #f5b653;
+}
+
+body.sidebar-collapsed .plan-card {
+  display: none;
+}
+
+/* ===== Bloqueio por plano (upgrade gate) ===== */
+.page.is-locked,
+.notification-section.is-locked {
+  position: relative;
+}
+
+.page.is-locked > :not(.upgrade-gate),
+.notification-section.is-locked > :not(.upgrade-gate) {
+  filter: blur(7px) saturate(.8);
+  opacity: .55;
+  pointer-events: none;
+  user-select: none;
+}
+
+.upgrade-gate {
+  position: absolute;
+  inset: 0;
+  z-index: 8;
+  display: grid;
+  place-items: start center;
+  padding: 24px;
+}
+
+.upgrade-gate .upgrade-gate-card {
+  position: sticky;
+  top: 90px;
+  margin-top: 30px;
+}
+
+.upgrade-gate-card {
+  display: grid;
+  gap: 10px;
+  justify-items: start;
+  max-width: 420px;
+  padding: 26px 28px;
+  border: 1px solid rgba(var(--accent-rgb), 0.3);
+  border-radius: 12px;
+  background: rgba(10, 16, 10, 0.96);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
+}
+
+.upgrade-pill {
+  padding: 4px 12px;
+  border: 1px solid rgba(var(--accent-rgb), 0.4);
+  border-radius: 999px;
+  color: var(--accent);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-bold);
+  text-transform: uppercase;
+  letter-spacing: .05em;
+}
+
+.upgrade-gate-card h2 {
+  font-size: var(--text-xl);
+}
+
+.upgrade-gate-card p {
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.upgrade-button {
+  display: inline-flex;
+  align-items: center;
+  min-height: 42px;
+  margin-top: 4px;
+  padding: 0 20px;
+  border-radius: var(--radius);
+  background: var(--accent);
+  color: #071009;
+  font-weight: var(--weight-bold);
+  text-decoration: none;
+}
+
+.upgrade-button:hover {
+  background: var(--accent-strong);
+}
+
+.upgrade-inline-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+}
+
+/* ===== Lista de webhooks ===== */
+.webhook-list {
+  display: grid;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.webhook-row {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid rgba(var(--accent-rgb), 0.14);
+  border-radius: var(--radius);
+  background: rgba(255, 255, 255, 0.016);
+}
+
+.webhook-row-info {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.webhook-row-info strong {
+  color: var(--text);
+  font-size: var(--text-sm);
+}
+
+.webhook-row-info code {
+  min-width: 0;
+  padding: 9px 10px;
+  overflow: hidden;
+  border: 1px solid rgba(var(--accent-rgb), 0.16);
+  border-radius: 6px;
+  background: var(--field);
+  color: #dce8d8;
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-size: var(--text-xs);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.webhook-row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.webhook-row-actions button {
+  min-height: 34px;
+  padding: 0 12px;
+  border: 1px solid rgba(var(--accent-rgb), 0.2);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-bold);
+}
+
+.webhook-row-actions button:hover {
+  border-color: rgba(var(--accent-rgb), .42);
+  color: var(--accent);
+}
+
+.webhook-row-actions button.is-danger {
+  border-color: rgba(255, 123, 114, 0.24);
+}
+
+.webhook-row-actions button.is-danger:hover {
+  border-color: rgba(255, 123, 114, 0.5);
+  color: var(--danger);
+}
+
+/* ===== Transações: busca + exportação ===== */
+.transactions-tools {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  min-width: 0;
+}
+
+.transactions-tools input {
+  max-width: 360px;
+}
+
+.export-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 16px;
+  border: 1px solid rgba(var(--accent-rgb), 0.2);
+  border-radius: var(--radius);
+  background: rgba(255, 255, 255, .035);
+  color: var(--text);
+  font-weight: var(--weight-semibold);
+  white-space: nowrap;
+  transition: border-color 140ms ease, color 140ms ease, background 140ms ease;
+}
+
+.export-button svg {
+  width: 16px;
+  height: 16px;
+  fill: currentColor;
+}
+
+.export-button:hover {
+  border-color: rgba(var(--accent-rgb), .4);
+  background: rgba(var(--accent-rgb), .07);
+  color: var(--accent);
+}
+
+body[data-plan="start"] .export-button,
+body[data-plan="pro"] .export-button {
+  opacity: .66;
+}
+
+/* ===== Status de reembolso na tabela ===== */
+.is-refunded-row td {
+  color: var(--muted);
+}
+
+.is-refunded-row .transaction-value-cell > span {
+  text-decoration: line-through;
+  text-decoration-color: rgba(255, 123, 114, 0.6);
+}
+
+.status-label {
+  display: block;
+  margin-top: 3px;
+  font-size: 11px;
+  font-weight: var(--weight-bold);
+}
+
+.status-label.is-refunded {
+  color: #f5b653;
+}
+
+.status-label.is-chargeback {
+  color: var(--danger);
+}
+
+@media (max-width: 720px) {
+  .metric-refunded-sales {
+    grid-column: auto;
+    order: 13;
+  }
+
+  .metric-refund-rate { order: 14; }
+  .metric-chargeback-rate { order: 15; }
+
+  .transactions-tools {
+    display: grid;
+    grid-template-columns: 1fr;
+    width: 100%;
+  }
+
+  .transactions-tools input {
+    max-width: none;
+  }
+
+  .export-button {
+    justify-content: center;
+    width: 100%;
+  }
+
+  .upgrade-gate .upgrade-gate-card {
+    top: 16px;
+    margin-top: 8px;
   }
 }
 

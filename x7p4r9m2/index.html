@@ -1,4 +1,4 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="pt-BR">
   <head>
     <meta charset="utf-8">
@@ -14,7 +14,7 @@
     <link rel="apple-touch-icon" sizes="192x192" href="../assets/icon-192.png?v=55">
     <link rel="apple-touch-icon" sizes="512x512" href="../assets/icon-512.png?v=55">
     <link rel="icon" href="../assets/icon-192.png?v=55" type="image/png">
-    <link rel="stylesheet" href="../styles.css?v=101">
+    <link rel="stylesheet" href="../styles.css?v=103">
   </head>
   <body class="auth-pending">
     <div class="app-shell">
@@ -28,6 +28,12 @@
         <button class="sidebar-toggle" id="sidebarToggle" type="button" aria-label="Recolher barra lateral" aria-expanded="true" title="Recolher barra lateral">
           <span aria-hidden="true"></span>
         </button>
+        <div class="workspace-switch" id="workspaceSwitch" hidden>
+          <label>
+            <span>Negócio</span>
+            <select id="workspaceSelect" data-native-only="true" aria-label="Selecionar negócio"></select>
+          </label>
+        </div>
         <nav class="side-nav">
           <button class="nav-item is-active" data-page="dashboard" type="button" aria-label="Dashboard">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z"></path></svg>
@@ -66,6 +72,11 @@
             <span>Notificações</span>
           </button>
         </nav>
+        <div class="plan-card" id="planCard" hidden>
+          <strong id="planCardName">Plano</strong>
+          <span id="planCardUsage"></span>
+          <div class="plan-usage-track" aria-hidden="true"><span id="planCardUsageBar"></span></div>
+        </div>
         <button class="logout-button" id="logoutButton" type="button" aria-label="Sair da conta">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 4H5v16h5v-2H7V6h3zm4.6 3.4L13.2 8.8l2.2 2.2H9v2h6.4l-2.2 2.2 1.4 1.4L19.2 12z"></path></svg>
           <span>Sair</span>
@@ -286,7 +297,13 @@
           <article class="panel transactions-panel">
             <div class="transactions-head">
               <h1>Transações</h1>
-              <input id="transactionSearch" type="search" placeholder="Buscar por cliente, telefone, atendente ou valor" aria-label="Buscar transações">
+              <div class="transactions-tools">
+                <input id="transactionSearch" type="search" placeholder="Buscar por cliente, telefone, atendente ou valor" aria-label="Buscar transações">
+                <button class="export-button" id="exportCsvButton" type="button" title="Exportar transações do período em CSV">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v10.2l3.6-3.6 1.4 1.4-6 6-6-6 1.4-1.4L11 13.2V3h1zM5 19h14v2H5z"></path></svg>
+                  <span>Exportar CSV</span>
+                </button>
+              </div>
             </div>
             <div class="table-wrap">
               <table>
@@ -537,12 +554,12 @@
             <div class="settings-grid integrations-grid">
               <div class="integration-card">
                 <h2>Vendas por webhook</h2>
-                <p>Copie a URL abaixo para sua automação, CRM ou checkout e envie uma requisição POST em JSON. <strong>valor</strong> e <strong>id</strong> identificam a venda; cliente, telefone, moeda, atendente, produto, origem, status e timestamp completam o registro.</p>
-                <div class="webhook-field">
-                  <code id="salesWebhookUrl">Carregando URL segura...</code>
-                  <button id="copyWebhookButton" type="button">Copiar</button>
+                <p>Envie uma requisição POST em JSON de sua automação, CRM ou checkout. <strong>valor</strong> e <strong>id</strong> identificam a venda; cliente, telefone, moeda, atendente, produto, origem, status e timestamp completam o registro.</p>
+                <div class="webhook-list" id="salesWebhookList">
+                  <p class="integration-status">Carregando webhooks...</p>
                 </div>
-                <button class="integration-secondary-action" id="regenerateWebhookButton" type="button">Gerar nova URL</button>
+                <button class="integration-secondary-action" id="addWebhookButton" type="button">Adicionar webhook</button>
+                <p class="integration-status" id="webhookLimitNote"></p>
               </div>
               <div class="integration-card">
                 <h2>Lançamento manual</h2>
@@ -672,10 +689,10 @@
         </button>
       </nav>
     </div>
-    <script src="../config.js?v=101"></script>
-    <script src="../supabase-provider.js?v=2"></script>
-    <script src="../push-client.js?v=63"></script>
-    <script src="../app.js?v=101"></script>
+    <script src="../config.js?v=104"></script>
+    <script src="../supabase-provider.js?v=6"></script>
+    <script src="../push-client.js?v=64"></script>
+    <script src="../app.js?v=103"></script>
   </body>
 </html>
 

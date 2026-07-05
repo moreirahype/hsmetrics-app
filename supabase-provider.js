@@ -178,39 +178,71 @@
     });
   }
 
+  const activeWorkspaceKey = "hsm-active-workspace";
+
   async function getContext() {
     if (contextPromise) return contextPromise;
     contextPromise = (async () => {
       const active = await getSession();
       if (!active?.user?.id) throw new Error("Sessão expirada. Entre novamente.");
       let memberships = await rest("workspace_members", {
-        select: "workspace_id,role",
+        select: "workspace_id,role,created_at",
         user_id: `eq.${active.user.id}`,
-        limit: 1
+        order: "created_at.asc"
       });
       if (!memberships.length) {
         const created = await rpc("bootstrap_workspace", { workspace_name: "Meu negócio" });
         memberships = created.map((item) => ({ workspace_id: item.workspace_id, role: item.member_role }));
       }
-      const membership = memberships[0];
-      const [workspaces, subscriptions] = await Promise.all([
-        rest("workspaces", { select: "*", id: `eq.${membership.workspace_id}`, limit: 1 }),
-        membership.role === "attendant"
-          ? Promise.resolve([])
-          : rest("subscriptions", { select: "*", workspace_id: `eq.${membership.workspace_id}`, limit: 1 })
-      ]);
+      const preferredId = localStorage.getItem(activeWorkspaceKey) || "";
+      const membership = memberships.find((item) => item.workspace_id === preferredId) || memberships[0];
+      const workspaceIds = memberships.map((item) => item.workspace_id);
+      const workspaces = await rest("workspaces", {
+        select: "*",
+        id: `in.(${workspaceIds.join(",")})`,
+        order: "created_at.asc"
+      });
+      // A assinatura vale para todos os negócios do dono: fica no workspace mais antigo dele.
+      let subscription = null;
+      if (membership.role !== "attendant") {
+        const owned = workspaces.filter((item) => item.owner_id === active.user.id);
+        const rootWorkspace = owned[0] || workspaces.find((item) => item.id === membership.workspace_id);
+        if (rootWorkspace) {
+          const subscriptions = await rest("subscriptions", {
+            select: "*",
+            workspace_id: `eq.${rootWorkspace.id}`,
+            limit: 1
+          });
+          subscription = subscriptions[0] || null;
+        }
+      }
       return {
         user: active.user,
         workspaceId: membership.workspace_id,
         role: membership.role,
-        workspace: workspaces[0] || null,
-        subscription: subscriptions[0] || null
+        workspace: workspaces.find((item) => item.id === membership.workspace_id) || null,
+        workspaces,
+        memberships,
+        subscription
       };
     })().catch((error) => {
       contextPromise = null;
       throw error;
     });
     return contextPromise;
+  }
+
+  function setActiveWorkspace(workspaceId) {
+    if (workspaceId) localStorage.setItem(activeWorkspaceKey, String(workspaceId));
+    else localStorage.removeItem(activeWorkspaceKey);
+    contextPromise = null;
+  }
+
+  async function createWorkspace(name) {
+    const rows = await rpc("create_workspace", { workspace_name: String(name || "").trim() || "Novo negócio" });
+    contextPromise = null;
+    const created = Array.isArray(rows) ? rows[0] : rows;
+    return created?.workspace_id || created;
   }
 
   function loginUrl() {
@@ -252,10 +284,19 @@
     };
   }
 
+  function rangeBounds(range) {
+    // Envia limites com fuso explícito: sem isso, vendas do fim do dia (após ~21h no Brasil)
+    // caíam fora do filtro porque o Postgres interpretava o horário como UTC.
+    const start = new Date(range.start);
+    start.setHours(0, 0, 0, 0);
+    const end = new Date(range.end);
+    end.setHours(23, 59, 59, 999);
+    return { from: start.toISOString(), to: end.toISOString() };
+  }
+
   async function getWorkspaceCollections(range) {
     const context = await getContext();
-    const from = `${isoDate(range.start)}T00:00:00`;
-    const to = `${isoDate(range.end)}T23:59:59.999`;
+    const { from, to } = rangeBounds(range);
     const [transactions, products, attendants, goals] = await Promise.all([
       rest("transactions", {
         select: "*",
@@ -424,7 +465,7 @@
       const originalAmount = numberValue(form, "valor");
       const originalCurrency = value(form, "moeda", "BRL").toUpperCase();
       const rate = Number(config.currencyRates?.[originalCurrency] || 1);
-      return write("transactions", "POST", {
+      const inserted = await write("transactions", "POST", {
         workspace_id: workspaceId,
         product_id: product?.id || null,
         attendant_id: attendant?.id || null,
@@ -444,6 +485,14 @@
         product_percent_cost: Number(product?.percent_cost || 0),
         is_front_sale: product ? Boolean(product.is_front) : true
       });
+      const insertedId = Array.isArray(inserted) ? inserted[0]?.id : inserted?.id;
+      if (insertedId) {
+        api("/functions/v1/notify-sale", {
+          method: "POST",
+          body: JSON.stringify({ transaction_id: insertedId })
+        }).catch(() => {});
+      }
+      return inserted;
     }
     if (action === "updateTransaction") {
       const attendant = await resolveAttendant(workspaceId, value(form, "atendente"));
@@ -544,14 +593,15 @@
     const attendants = await rest("attendants", { select: "*", workspace_id: `eq.${context.workspaceId}`, user_id: `eq.${context.user.id}`, limit: 1 });
     const attendant = attendants[0];
     if (!attendant) throw new Error("Seu usuário ainda não foi vinculado a um atendente.");
-    const from = `${isoDate(range.start)}T00:00:00`;
-    const to = `${isoDate(range.end)}T23:59:59.999`;
+    const { from, to } = rangeBounds(range);
     const [transactions, goals] = await Promise.all([
       rest("transactions", { select: "*", workspace_id: `eq.${context.workspaceId}`, attendant_id: `eq.${attendant.id}`, occurred_at: `gte.${from}`, and: `(occurred_at.lte.${to})`, order: "occurred_at.desc" }),
       rest("attendant_goals", { select: "*", workspace_id: `eq.${context.workspaceId}`, attendant_id: `eq.${attendant.id}`, order: "created_at.desc" })
     ]);
     return {
       attendant: {
+        id: attendant.id,
+        slug: attendant.slug,
         nome: attendant.name,
         comissao_percentual: Number(attendant.commission_percent || 0),
         salario_fixo_mensal: Number(attendant.monthly_fixed_brl || 0),
@@ -580,7 +630,26 @@
     return Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join("");
   }
 
-  async function getSalesWebhookUrl() {
+  function webhookUrlFor(token) {
+    return `${supabaseUrl}/functions/v1/sales-webhook?token=${encodeURIComponent(token)}`;
+  }
+
+  function normalizeWebhookTokens(settings) {
+    const tokens = Array.isArray(settings?.tokens) ? settings.tokens : [];
+    const list = tokens
+      .filter((item) => item && item.token)
+      .map((item, index) => ({
+        token: String(item.token),
+        label: String(item.label || `Webhook ${index + 1}`),
+        created_at: item.created_at || null
+      }));
+    if (!list.length && settings?.token) {
+      list.push({ token: String(settings.token), label: "Webhook 1", created_at: null });
+    }
+    return list;
+  }
+
+  async function getSalesWebhookIntegration() {
     const context = await getContext();
     let integration = await findOne("integrations", {
       workspace_id: `eq.${context.workspaceId}`,
@@ -592,28 +661,97 @@
         workspace_id: context.workspaceId,
         provider: "sales_webhook",
         status: "active",
-        settings: { token }
+        settings: { token, tokens: [{ token, label: "Webhook 1", created_at: new Date().toISOString() }] }
       });
       integration = rows[0];
     }
-    const token = integration?.settings?.token;
-    if (!token) throw new Error("Não foi possível gerar o webhook.");
-    return `${supabaseUrl}/functions/v1/sales-webhook?token=${encodeURIComponent(token)}`;
+    return integration;
+  }
+
+  async function saveWebhookTokens(integration, tokens) {
+    const settings = Object.assign({}, integration.settings || {}, {
+      tokens,
+      token: tokens[0]?.token || null
+    });
+    const rows = await write("integrations", "PATCH", {
+      status: "active",
+      settings,
+      updated_at: new Date().toISOString()
+    }, { id: `eq.${integration.id}` });
+    return rows[0] || Object.assign({}, integration, { settings });
+  }
+
+  async function getSalesWebhooks() {
+    const integration = await getSalesWebhookIntegration();
+    let tokens = normalizeWebhookTokens(integration.settings);
+    if (!Array.isArray(integration.settings?.tokens) && tokens.length) {
+      await saveWebhookTokens(integration, tokens);
+    }
+    return tokens.map((item) => Object.assign({ url: webhookUrlFor(item.token) }, item));
+  }
+
+  async function addSalesWebhook(label) {
+    const integration = await getSalesWebhookIntegration();
+    const tokens = normalizeWebhookTokens(integration.settings);
+    tokens.push({
+      token: randomToken(),
+      label: String(label || "").trim() || `Webhook ${tokens.length + 1}`,
+      created_at: new Date().toISOString()
+    });
+    await saveWebhookTokens(integration, tokens);
+    return tokens.map((item) => Object.assign({ url: webhookUrlFor(item.token) }, item));
+  }
+
+  async function removeSalesWebhook(token) {
+    const integration = await getSalesWebhookIntegration();
+    const tokens = normalizeWebhookTokens(integration.settings).filter((item) => item.token !== token);
+    await saveWebhookTokens(integration, tokens);
+    return tokens.map((item) => Object.assign({ url: webhookUrlFor(item.token) }, item));
+  }
+
+  async function regenerateSalesWebhook(token) {
+    const integration = await getSalesWebhookIntegration();
+    const tokens = normalizeWebhookTokens(integration.settings).map((item) =>
+      item.token === token
+        ? Object.assign({}, item, { token: randomToken(), created_at: new Date().toISOString() })
+        : item
+    );
+    await saveWebhookTokens(integration, tokens);
+    return tokens.map((item) => Object.assign({ url: webhookUrlFor(item.token) }, item));
+  }
+
+  // Compatibilidade com chamadas antigas.
+  async function getSalesWebhookUrl() {
+    const list = await getSalesWebhooks();
+    if (!list.length) throw new Error("Não foi possível gerar o webhook.");
+    return list[0].url;
   }
 
   async function regenerateSalesWebhookUrl() {
+    const list = await getSalesWebhooks();
+    const updated = await regenerateSalesWebhook(list[0]?.token);
+    return updated[0]?.url;
+  }
+
+  async function saveNotificationPreferences(audience, preferences) {
     const context = await getContext();
-    const token = randomToken();
-    const existing = await findOne("integrations", {
+    const body = {
+      workspace_id: context.workspaceId,
+      user_id: context.user.id,
+      audience: audience === "attendant" ? "attendant" : "owner",
+      sale_notifications_enabled: preferences.salesEnabled !== false,
+      report_notifications_enabled: Boolean(preferences.times && preferences.times.length),
+      report_times: Array.isArray(preferences.times) ? preferences.times : [],
+      report_style: ["profit_status", "detailed", "creative"].includes(preferences.reportStyle) ? preferences.reportStyle : "detailed",
+      updated_at: new Date().toISOString()
+    };
+    const existing = await findOne("notification_preferences", {
       workspace_id: `eq.${context.workspaceId}`,
-      provider: "eq.sales_webhook"
+      user_id: `eq.${context.user.id}`,
+      audience: `eq.${body.audience}`
     });
-    if (existing) {
-      await write("integrations", "PATCH", { status: "active", settings: { token }, updated_at: new Date().toISOString() }, { id: `eq.${existing.id}` });
-    } else {
-      await write("integrations", "POST", { workspace_id: context.workspaceId, provider: "sales_webhook", status: "active", settings: { token } });
-    }
-    return `${supabaseUrl}/functions/v1/sales-webhook?token=${encodeURIComponent(token)}`;
+    if (existing) return write("notification_preferences", "PATCH", body, { id: `eq.${existing.id}` });
+    return write("notification_preferences", "POST", body);
   }
 
   async function startMetaConnection() {
@@ -681,6 +819,13 @@
     updateWorkspaceSettings,
     getSalesWebhookUrl,
     regenerateSalesWebhookUrl,
+    getSalesWebhooks,
+    addSalesWebhook,
+    removeSalesWebhook,
+    regenerateSalesWebhook,
+    saveNotificationPreferences,
+    setActiveWorkspace,
+    createWorkspace,
     startMetaConnection,
     getIntegrationStatus,
     getAdAccounts,

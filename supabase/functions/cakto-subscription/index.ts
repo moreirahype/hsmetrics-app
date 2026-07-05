@@ -172,7 +172,7 @@ Deno.serve(async (request) => {
     const userId = profiles?.[0]?.id;
     let invitationSent = false;
     if (userId) {
-      const { data: workspaces, error: workspaceError } = await service.from("workspaces").select("id").eq("owner_id", userId).limit(1);
+      const { data: workspaces, error: workspaceError } = await service.from("workspaces").select("id").eq("owner_id", userId).order("created_at", { ascending: true }).limit(1);
       if (workspaceError) throw workspaceError;
       const workspaceId = workspaces?.[0]?.id;
       if (workspaceId) {

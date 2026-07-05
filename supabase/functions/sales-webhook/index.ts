@@ -52,6 +52,62 @@ async function exchangeRate(currency: string, payload: Record<string, unknown>) 
   return rate;
 }
 
+function formatBrl(value: number) {
+  return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+}
+
+// Envia o push de "Venda realizada!" para o dono do workspace e para o atendente vinculado.
+async function sendSalePush(
+  supabase: ReturnType<typeof createClient>,
+  workspaceId: string,
+  attendantId: string | null,
+  grossBrl: number,
+  attendantName: string
+) {
+  const pushApiUrl = (Deno.env.get("PUSH_API_URL") || "").replace(/\/$/, "");
+  const pushSecret = Deno.env.get("PUSH_API_SECRET") || "";
+  if (!pushApiUrl || !pushSecret) return;
+  const appUrl = Deno.env.get("APP_URL") || "https://app.hsmetrics.com.br/";
+
+  const { data: prefs } = await supabase
+    .from("notification_preferences")
+    .select("audience,sale_notifications_enabled,show_attendant")
+    .eq("workspace_id", workspaceId);
+  const ownerPref = (prefs || []).find((item) => item.audience === "owner");
+  const targets: Array<{ audience: string; body: string; url: string }> = [];
+  if (!ownerPref || ownerPref.sale_notifications_enabled !== false) {
+    const showAttendant = !ownerPref || ownerPref.show_attendant !== false;
+    targets.push({
+      audience: `owner-${workspaceId}`,
+      body: showAttendant && attendantName && !/^sem atendente$/i.test(attendantName)
+        ? `Valor: ${formatBrl(grossBrl)} • ${attendantName}`
+        : `Valor: ${formatBrl(grossBrl)}`,
+      url: `${appUrl.replace(/\/$/, "")}/x7p4r9m2/#transactions`
+    });
+  }
+  if (attendantId) {
+    targets.push({
+      audience: `att-${attendantId}`,
+      body: `Valor: ${formatBrl(grossBrl)}`,
+      url: `${appUrl.replace(/\/$/, "")}/k9v2m7q4/#transactions`
+    });
+  }
+  await Promise.all(targets.map((target) =>
+    fetch(`${pushApiUrl}/api/send`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${pushSecret}` },
+      body: JSON.stringify({
+        audience: target.audience,
+        kind: "sale",
+        title: "Venda realizada!",
+        body: target.body,
+        url: target.url,
+        tag: `hsbi-sale-${Date.now()}`
+      })
+    })
+  ));
+}
+
 Deno.serve(async (request) => {
   if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: corsHeaders });
   if (request.method !== "POST") return response(405, { ok: false, error: "Metodo invalido." });
@@ -66,14 +122,26 @@ Deno.serve(async (request) => {
       { auth: { persistSession: false } }
     );
 
-    const { data: integrations, error: integrationError } = await supabase
+    // Procura o token na lista de webhooks (planos Pro/Scale) e cai no formato antigo de token único.
+    let { data: integrations, error: integrationError } = await supabase
       .from("integrations")
       .select("workspace_id,settings,status")
       .eq("provider", "sales_webhook")
       .eq("status", "active")
-      .contains("settings", { token })
+      .contains("settings", { tokens: [{ token }] })
       .limit(1);
     if (integrationError) throw integrationError;
+    if (!integrations?.length) {
+      const legacy = await supabase
+        .from("integrations")
+        .select("workspace_id,settings,status")
+        .eq("provider", "sales_webhook")
+        .eq("status", "active")
+        .contains("settings", { token })
+        .limit(1);
+      if (legacy.error) throw legacy.error;
+      integrations = legacy.data;
+    }
     const integration = integrations?.[0];
     if (!integration) return response(401, { ok: false, error: "Webhook invalido ou desativado." });
 
@@ -142,6 +210,12 @@ Deno.serve(async (request) => {
       .select("id")
       .single();
     if (error) throw error;
+
+    if (status === "approved") {
+      await sendSalePush(supabase, workspaceId, attendant?.id || null, grossBrl, attendantName).catch((pushError) => {
+        console.error("sale push failed", pushError);
+      });
+    }
 
     return response(200, { ok: true, id: data.id, duplicate_safe: true });
   } catch (error) {
