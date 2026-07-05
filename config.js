@@ -11,6 +11,7 @@ window.HSBI_CONFIG = {
   },
   // Backend de Web Push (repositório hsmetrics-push na Vercel).
   // Confirme a URL do deploy na Vercel; a chave pública VAPID é a mesma do .env do projeto.
+  affiliateInviteUrl: "https://app.cakto.com.br/affiliate/invite/4d4bbae9-5af8-458d-abda-bb4aa53bc0b9",
   pushApiUrl: "https://hsmetrics-push.vercel.app",
   vapidPublicKey: "BIONXeSdJHmIO-KPwxP9WVO7RAbZv5FuKzJm3VeKhJ1ZJ28TURClK4QeJfVgZOCvJHDWsUMueL9ZY8ZngzFQpxI",
   metaTaxRate: 0.1383,

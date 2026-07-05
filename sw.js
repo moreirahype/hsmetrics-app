@@ -1,4 +1,4 @@
-﻿const CACHE_NAME = "hsmetrics-sales-app-v67";
+﻿const CACHE_NAME = "hsmetrics-sales-app-v68";
 const ASSETS = [
   "./",
   "./index.html",

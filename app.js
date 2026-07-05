@@ -249,6 +249,28 @@
     return Boolean(dataProvider || config.apiUrl);
   }
 
+  function initializeAffiliatePage() {
+    const urlNode = document.getElementById("affiliateInviteUrl");
+    const copyButton = document.getElementById("copyAffiliateButton");
+    const openLink = document.getElementById("affiliateOpenLink");
+    const inviteUrl = String(config.affiliateInviteUrl || "").trim();
+    if (!urlNode || !openLink) return;
+    if (!inviteUrl) {
+      urlNode.textContent = "Convite indisponível no momento.";
+      openLink.hidden = true;
+      if (copyButton) copyButton.hidden = true;
+      return;
+    }
+    urlNode.textContent = inviteUrl;
+    openLink.href = inviteUrl;
+    if (copyButton) {
+      copyButton.addEventListener("click", async () => {
+        await navigator.clipboard.writeText(inviteUrl);
+        showNotificationSavedToast("Convite copiado");
+      });
+    }
+  }
+
   function renderWorkspaceSwitcher() {
     if (!els.workspaceSwitch || !els.workspaceSelect) return;
     const limits = planLimits();
@@ -448,6 +470,7 @@
     if (els.exportCsvButton) {
       els.exportCsvButton.addEventListener("click", exportTransactionsCsv);
     }
+    initializeAffiliatePage();
     if (els.connectMetaButton) {
       els.connectMetaButton.addEventListener("click", connectMetaAds);
     }
@@ -1791,7 +1814,7 @@
   }
 
   function setPage(page) {
-    if (!["dashboard", "attendants", "products", "transactions", "goals", "settings-attendants", "settings-products", "integrations", "notifications", "settings"].includes(page)) return;
+    if (!["dashboard", "attendants", "products", "transactions", "goals", "settings-attendants", "settings-products", "integrations", "notifications", "settings", "affiliate"].includes(page)) return;
     if (state.page === page) return;
     state.page = page;
     els.pages.forEach((section) => section.classList.toggle("is-active", section.dataset.page === page));

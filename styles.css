@@ -357,7 +357,8 @@ body.sidebar-collapsed .sidebar-toggle {
 
 body[data-current-page="notifications"] .control-panel,
 body[data-current-page="integrations"] .control-panel,
-body[data-current-page="settings"] .control-panel {
+body[data-current-page="settings"] .control-panel,
+body[data-current-page="affiliate"] .control-panel {
   display: none;
 }
 
@@ -3287,6 +3288,52 @@ body.sidebar-collapsed .plan-card {
 .webhook-row-actions button.is-danger:hover {
   border-color: rgba(255, 123, 114, 0.5);
   color: var(--danger);
+}
+
+/* ===== Indique e ganhe (afiliados) ===== */
+.affiliate-panel {
+  max-width: 760px;
+}
+
+.affiliate-steps {
+  display: grid;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.affiliate-step {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr);
+  gap: 14px;
+  align-items: center;
+  padding: 14px 16px;
+  border: 1px solid rgba(var(--accent-rgb), 0.14);
+  border-radius: var(--radius);
+  background: rgba(255, 255, 255, 0.018);
+}
+
+.affiliate-step span {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border: 1px solid rgba(var(--accent-rgb), 0.4);
+  border-radius: 50%;
+  color: var(--accent);
+  font-weight: var(--weight-bold);
+}
+
+.affiliate-step p {
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.affiliate-link-field {
+  margin-top: 20px;
+}
+
+.affiliate-cta {
+  margin-top: 16px;
 }
 
 /* ===== Transações: busca + exportação ===== */

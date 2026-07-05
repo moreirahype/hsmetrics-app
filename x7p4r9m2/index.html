@@ -14,7 +14,7 @@
     <link rel="apple-touch-icon" sizes="192x192" href="../assets/icon-192.png?v=55">
     <link rel="apple-touch-icon" sizes="512x512" href="../assets/icon-512.png?v=55">
     <link rel="icon" href="../assets/icon-192.png?v=55" type="image/png">
-    <link rel="stylesheet" href="../styles.css?v=103">
+    <link rel="stylesheet" href="../styles.css?v=104">
   </head>
   <body class="auth-pending">
     <div class="app-shell">
@@ -70,6 +70,10 @@
           <button class="nav-item" data-page="notifications" type="button" aria-label="Notificações">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 22a2.5 2.5 0 0 0 2.45-2h-4.9A2.5 2.5 0 0 0 12 22zm7-5-2-2v-5a5 5 0 0 0-10 0v5l-2 2v1h14z"></path></svg>
             <span>Notificações</span>
+          </button>
+          <button class="nav-item" data-page="affiliate" type="button" aria-label="Indique e ganhe">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3 6 7.5H4a2 2 0 0 0-2 2v5a2 2 0 0 0 2 2h1v4h3v-4h-2v-7h.5L14 5.4V18.6l-5-2.5v2.2l5 2.5 2 1V3l-2 0zm4 4.7v8.6a4.3 4.3 0 0 0 2.5-3.9v-.8A4.3 4.3 0 0 0 18 7.7z"></path></svg>
+            <span>Indique e ganhe</span>
           </button>
         </nav>
         <div class="plan-card" id="planCard" hidden>
@@ -610,7 +614,25 @@
               <button class="settings-shortcut" data-page="settings-products" type="button">Produtos</button>
               <button class="settings-shortcut" data-page="integrations" type="button">Integrações</button>
               <button class="settings-shortcut" data-page="notifications" type="button">Notificações</button>
+              <button class="settings-shortcut" data-page="affiliate" type="button">Indique e ganhe</button>
             </div>
+          </article>
+        </section>
+
+        <section class="page" id="page-affiliate" data-page="affiliate">
+          <article class="panel settings-panel affiliate-panel">
+            <div class="panel-header"><h1>Indique e ganhe</h1></div>
+            <p class="settings-copy">Indique o HS Metrics e ganhe comissão em cada assinatura que entrar pelo seu link. O programa de afiliados é gerenciado pela Cakto, com pagamento automático.</p>
+            <div class="affiliate-steps">
+              <div class="affiliate-step"><span>1</span><p>Cadastre-se como afiliado usando o convite abaixo.</p></div>
+              <div class="affiliate-step"><span>2</span><p>Pegue seu link exclusivo de divulgação no painel da Cakto.</p></div>
+              <div class="affiliate-step"><span>3</span><p>Compartilhe com quem vende online e acompanhe as comissões por lá.</p></div>
+            </div>
+            <div class="webhook-field affiliate-link-field">
+              <code id="affiliateInviteUrl">Carregando convite...</code>
+              <button id="copyAffiliateButton" type="button">Copiar</button>
+            </div>
+            <a class="upgrade-button affiliate-cta" id="affiliateOpenLink" href="#" target="_blank" rel="noopener">Quero ser afiliado</a>
           </article>
         </section>
 
@@ -689,10 +711,10 @@
         </button>
       </nav>
     </div>
-    <script src="../config.js?v=104"></script>
+    <script src="../config.js?v=105"></script>
     <script src="../supabase-provider.js?v=6"></script>
     <script src="../push-client.js?v=64"></script>
-    <script src="../app.js?v=103"></script>
+    <script src="../app.js?v=104"></script>
   </body>
 </html>
 
