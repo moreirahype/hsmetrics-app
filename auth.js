@@ -105,7 +105,9 @@
 
   function setLoading(loading) {
     submit.disabled = loading;
+    recover.disabled = loading;
     submit.textContent = loading ? "Aguarde..." : mode === "set-password" ? "Salvar senha e entrar" : "Entrar";
+    recover.textContent = loading ? "Aguarde..." : "Esqueci minha senha";
   }
 
   function setMessage(text, success = false) {
@@ -118,6 +120,9 @@
     if (/invalid login credentials/i.test(value)) return "E-mail ou senha incorretos.";
     if (/email not confirmed/i.test(value)) return "Confirme seu e-mail antes de entrar.";
     if (/same password/i.test(value)) return "Escolha uma senha diferente da anterior.";
+    if (/email rate limit exceeded/i.test(value)) {
+      return "Limite temporário de envio de e-mails atingido. Aguarde alguns minutos e use apenas o link mais recente que chegar.";
+    }
     return value || "Não foi possível concluir agora.";
   }
 })();
