@@ -13,7 +13,7 @@ returns table (
 language sql
 immutable
 as $$
-  select *
+  select limits.sales_limit, limits.workspace_limit, limits.ad_account_limit, limits.webhook_limit, limits.team_limit
   from (values
     ('start', 300, 1, 1, 1, 0),
     ('pro', 2000, 3, 3, 3, 3),
