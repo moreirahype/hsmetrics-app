@@ -93,6 +93,21 @@
     });
     const payload = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(payload.msg || payload.error_description || payload.message || "Não foi possível salvar a senha.");
+    storeSession(Object.assign({}, active, { user: payload }));
+    return payload;
+  }
+
+  async function fetchCurrentUser(active) {
+    if (!active?.access_token) return null;
+    const response = await fetch(`${supabaseUrl}/auth/v1/user`, {
+      headers: {
+        apikey: publicKey,
+        Authorization: `Bearer ${active.access_token}`
+      }
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(payload.msg || payload.error_description || payload.message || "Sessão expirada. Entre novamente.");
+    storeSession(Object.assign({}, active, { user: payload }));
     return payload;
   }
 
@@ -111,6 +126,7 @@
 
   async function getSession() {
     if (sessionExpiresSoon(session)) await refreshSession();
+    if (session?.access_token && !session.user?.id) await fetchCurrentUser(session);
     return session;
   }
 
