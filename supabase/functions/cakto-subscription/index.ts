@@ -132,10 +132,12 @@ Deno.serve(async (request) => {
     const periodEnd = first(payload, ["subscription.current_period_end", "subscription.next_payment", "data.subscription.current_period_end", "data.subscription.next_payment", "next_payment_at"]) || null;
     let plan = planFrom(payload, requestUrl.searchParams.get("plan") || "");
 
-    if (!plan && email) {
-      const { data: pending } = await service.from("pending_entitlements").select("plan").ilike("email", email).limit(1);
-      plan = pending?.[0]?.plan || "";
-    }
+    const { data: pendingRows, error: pendingLookupError } = email
+      ? await service.from("pending_entitlements").select("plan, invitation_sent_at").ilike("email", email).limit(1)
+      : { data: null, error: null };
+    if (pendingLookupError) throw pendingLookupError;
+    const existingPending = pendingRows?.[0] || null;
+    if (!plan && existingPending) plan = existingPending.plan || "";
     if (!plan && subscriptionId) {
       const { data: existing } = await service.from("subscriptions").select("plan").eq("provider_subscription_id", subscriptionId).limit(1);
       plan = existing?.[0]?.plan || "";
@@ -159,6 +161,7 @@ Deno.serve(async (request) => {
       plan,
       current_period_ends_at: periodEnd,
       payload,
+      invitation_sent_at: existingPending?.invitation_sent_at || null,
       updated_at: new Date().toISOString()
     };
     const pendingResult = await service.from("pending_entitlements").upsert(entitlement, { onConflict: "email" });
@@ -185,7 +188,7 @@ Deno.serve(async (request) => {
         }, { onConflict: "workspace_id" });
         if (subscriptionResult.error) throw subscriptionResult.error;
       }
-    } else if (status === "active") {
+    } else if (status === "active" && !existingPending?.invitation_sent_at) {
       const appUrl = Deno.env.get("APP_URL") || "https://app.hsmetrics.com.br/";
       const { error: inviteError } = await service.auth.admin.inviteUserByEmail(email, {
         data: { name: customerName },
@@ -195,6 +198,10 @@ Deno.serve(async (request) => {
         console.warn("Could not send HS Metrics access invitation", { email, message: inviteError.message });
       } else {
         invitationSent = true;
+        await service
+          .from("pending_entitlements")
+          .update({ invitation_sent_at: new Date().toISOString() })
+          .ilike("email", email);
       }
     }
 
