@@ -154,8 +154,89 @@
     exportCsvButton: document.getElementById("exportCsvButton"),
     salesWebhookList: document.getElementById("salesWebhookList"),
     addWebhookButton: document.getElementById("addWebhookButton"),
-    webhookLimitNote: document.getElementById("webhookLimitNote")
+    webhookLimitNote: document.getElementById("webhookLimitNote"),
+    webhookGuidePlatform: document.getElementById("webhookGuidePlatform"),
+    webhookGuideSteps: document.getElementById("webhookGuideSteps"),
+    webhookGuidePayload: document.getElementById("webhookGuidePayload"),
+    copyWebhookPayload: document.getElementById("copyWebhookPayload"),
+    adSpendForm: document.getElementById("adSpendForm"),
+    adSpendDate: document.getElementById("adSpendDate"),
+    adSpendValue: document.getElementById("adSpendValue"),
+    adSpendList: document.getElementById("adSpendList")
   };
+
+  let primaryWebhookUrl = "";
+
+  const WEBHOOK_GUIDE = {
+    kiwify: [
+      "No painel da Kiwify, abra <strong>Apps &gt; Webhooks</strong> (ou Configurações &gt; Webhooks).",
+      "Clique em <strong>Criar webhook</strong> e cole a URL do webhook copiada acima no campo de URL.",
+      "Marque os eventos de <strong>compra aprovada</strong> (e, se quiser acompanhar estornos, reembolso e chargeback).",
+      "Salve. Faça uma venda de teste para confirmar que ela aparece na aba Transações."
+    ],
+    hotmart: [
+      "No painel da Hotmart, vá em <strong>Ferramentas &gt; Webhook (Postback)</strong>.",
+      "Clique em <strong>Adicionar configuração</strong> e cole a URL do webhook no campo de URL.",
+      "Selecione os eventos de <strong>compra aprovada/completa</strong> (e reembolso/chargeback, se usar).",
+      "Salve e envie um teste. A venda deve surgir na aba Transações."
+    ],
+    cakto: [
+      "No painel da Cakto, abra <strong>Webhooks</strong> nas configurações do produto.",
+      "Cole a URL do webhook copiada acima. O campo de chave secreta pode ficar em branco.",
+      "Marque <strong>compra aprovada</strong> e os eventos de reembolso/chargeback que quiser acompanhar.",
+      "Salve e faça uma compra de teste para validar."
+    ],
+    zapdata: [
+      "Na sua automação da Zapdata, adicione um passo de <strong>requisição HTTP / Webhook</strong> ao finalizar a venda.",
+      "Use o método <strong>POST</strong> e cole a URL do webhook copiada acima.",
+      "No corpo (body), envie um JSON como o exemplo abaixo, preenchendo com os dados da venda.",
+      "Ative a automação e dispare um teste para conferir na aba Transações."
+    ],
+    generic: [
+      "Na sua ferramenta, crie uma requisição <strong>POST</strong> apontando para a URL do webhook copiada acima.",
+      "Defina o cabeçalho <strong>Content-Type: application/json</strong>.",
+      "Envie no corpo um JSON como o exemplo abaixo (só o campo <code>valor</code> é obrigatório).",
+      "Dispare uma venda de teste e confira se ela aparece na aba Transações."
+    ]
+  };
+
+  function webhookGuidePayloadFor(platform) {
+    const base = {
+      valor: "197,00",
+      id: "venda-0001",
+      moeda: "BRL",
+      pagador: "Nome do cliente",
+      telefone: "(11) 98888-7777",
+      produto: "Nome do produto",
+      origem: platform === "generic" ? "webhook" : platform,
+      status: "approved"
+    };
+    if (platform === "zapdata" || platform === "generic") base.atendente = "Nome do atendente";
+    return JSON.stringify(base, null, 2);
+  }
+
+  function renderWebhookGuide() {
+    if (!els.webhookGuideSteps || !els.webhookGuidePayload) return;
+    const platform = els.webhookGuidePlatform ? els.webhookGuidePlatform.value : "generic";
+    const steps = WEBHOOK_GUIDE[platform] || WEBHOOK_GUIDE.generic;
+    els.webhookGuideSteps.innerHTML = steps.map((step) => `<li>${step}</li>`).join("");
+    els.webhookGuidePayload.textContent = webhookGuidePayloadFor(platform);
+  }
+
+  function initializeWebhookGuide() {
+    if (!els.webhookGuidePlatform) return;
+    els.webhookGuidePlatform.addEventListener("change", () => {
+      renderWebhookGuide();
+      refreshCustomSelects();
+    });
+    if (els.copyWebhookPayload) {
+      els.copyWebhookPayload.addEventListener("click", async () => {
+        await navigator.clipboard.writeText(els.webhookGuidePayload.textContent || "");
+        showNotificationSavedToast("Exemplo copiado");
+      });
+    }
+    renderWebhookGuide();
+  }
 
   function planLimits() {
     return PLAN_LIMITS[state.plan] || PLAN_LIMITS.start;
@@ -269,6 +350,83 @@
         showNotificationSavedToast("Convite copiado");
       });
     }
+  }
+
+  function initializeAdSpend() {
+    if (!els.adSpendForm || !dataProvider) return;
+    if (els.adSpendDate && !els.adSpendDate.value) els.adSpendDate.value = toIsoDate(new Date());
+    els.adSpendForm.addEventListener("submit", submitManualAdSpend);
+    renderAdSpendList();
+  }
+
+  async function submitManualAdSpend(event) {
+    event.preventDefault();
+    const dateValue = els.adSpendDate ? els.adSpendDate.value : "";
+    const amount = parseMoneyValue(els.adSpendValue ? els.adSpendValue.value : "");
+    if (!dateValue) {
+      alert("Informe o dia do gasto.");
+      return;
+    }
+    if (!(amount >= 0) || els.adSpendValue.value.trim() === "") {
+      alert("Informe um valor de gasto válido.");
+      els.adSpendValue.focus();
+      return;
+    }
+    const submitButton = els.adSpendForm.querySelector("button[type='submit']");
+    if (submitButton) submitButton.disabled = true;
+    try {
+      await dataProvider.saveManualAdSpend(dateValue, amount);
+      if (els.adSpendValue) els.adSpendValue.value = "";
+      showNotificationSavedToast("Gasto salvo");
+      await renderAdSpendList();
+      await refreshData({ applySelection: true });
+    } catch (error) {
+      console.error(error);
+      alert(translatePlanError(error));
+    } finally {
+      if (submitButton) submitButton.disabled = false;
+    }
+  }
+
+  async function renderAdSpendList() {
+    if (!els.adSpendList || !dataProvider) return;
+    const today = new Date();
+    const range = { start: addDays(today, -60), end: today };
+    let rows = [];
+    try {
+      rows = await dataProvider.getManualAdSpend(range);
+    } catch (error) {
+      console.error(error);
+      els.adSpendList.innerHTML = `<p class="integration-status">Não foi possível carregar os lançamentos.</p>`;
+      return;
+    }
+    if (!rows.length) {
+      els.adSpendList.innerHTML = `<p class="integration-status">Nenhum gasto lançado nos últimos 60 dias.</p>`;
+      return;
+    }
+    els.adSpendList.innerHTML = rows.map((row) => `
+      <div class="ad-spend-row" data-date="${escapeHtml(String(row.date).slice(0, 10))}">
+        <span>${formatIsoDateBr(String(row.date).slice(0, 10))}</span>
+        <strong>${money(Number(row.spend_brl || 0))}</strong>
+        <button type="button" data-ad-spend-delete="${escapeHtml(String(row.date).slice(0, 10))}" aria-label="Apagar gasto">Apagar</button>
+      </div>
+    `).join("");
+    els.adSpendList.querySelectorAll("[data-ad-spend-delete]").forEach((button) => {
+      button.addEventListener("click", async () => {
+        if (!window.confirm("Apagar este lançamento de gasto?")) return;
+        button.disabled = true;
+        try {
+          await dataProvider.deleteManualAdSpend(button.dataset.adSpendDelete);
+          showNotificationSavedToast("Gasto apagado");
+          await renderAdSpendList();
+          await refreshData({ applySelection: true });
+        } catch (error) {
+          console.error(error);
+          alert(translatePlanError(error));
+          button.disabled = false;
+        }
+      });
+    });
   }
 
   function renderWorkspaceSwitcher() {
@@ -471,6 +629,8 @@
       els.exportCsvButton.addEventListener("click", exportTransactionsCsv);
     }
     initializeAffiliatePage();
+    initializeWebhookGuide();
+    initializeAdSpend();
     if (els.connectMetaButton) {
       els.connectMetaButton.addEventListener("click", connectMetaAds);
     }

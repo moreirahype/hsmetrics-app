@@ -3336,6 +3336,194 @@ body.sidebar-collapsed .plan-card {
   margin-top: 16px;
 }
 
+/* ===== Gasto manual de anúncios ===== */
+.ad-spend-form {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.ad-spend-form label {
+  display: grid;
+  gap: 6px;
+  color: #cbe8c8;
+  font-size: var(--text-xs);
+}
+
+.ad-spend-form > button {
+  grid-column: 1 / -1;
+  min-height: 42px;
+  border: 0;
+  border-radius: 7px;
+  background: var(--accent);
+  color: #071009;
+  font-weight: var(--weight-bold);
+}
+
+.ad-spend-form > button:disabled {
+  cursor: wait;
+  opacity: 0.74;
+}
+
+.ad-spend-list {
+  display: grid;
+  gap: 0;
+  margin-top: 12px;
+}
+
+.ad-spend-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 12px;
+  min-height: 46px;
+  padding: 6px 0;
+  border-top: 1px solid rgba(var(--accent-rgb), 0.12);
+  color: var(--muted);
+  font-size: var(--text-sm);
+}
+
+.ad-spend-row strong {
+  color: var(--text);
+}
+
+.ad-spend-row button {
+  min-height: 30px;
+  padding: 0 10px;
+  border: 1px solid rgba(255, 123, 114, 0.2);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-bold);
+}
+
+.ad-spend-row button:hover {
+  border-color: rgba(255, 123, 114, 0.5);
+  color: var(--danger);
+}
+
+/* ===== Guia de configuração do webhook ===== */
+.webhook-guide {
+  margin-top: 14px;
+  border: 1px solid rgba(var(--accent-rgb), 0.14);
+  border-radius: var(--radius);
+  background: rgba(255, 255, 255, 0.014);
+}
+
+.webhook-guide > summary {
+  padding: 12px 14px;
+  color: var(--accent);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-bold);
+  cursor: pointer;
+  list-style: none;
+}
+
+.webhook-guide > summary::-webkit-details-marker {
+  display: none;
+}
+
+.webhook-guide > summary::before {
+  content: "+";
+  display: inline-block;
+  width: 16px;
+  margin-right: 6px;
+  font-weight: var(--weight-bold);
+}
+
+.webhook-guide[open] > summary::before {
+  content: "–";
+}
+
+.webhook-guide-body {
+  padding: 0 14px 16px;
+}
+
+.webhook-guide-picker {
+  display: grid;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+
+.webhook-guide-picker > span {
+  color: var(--muted);
+  font-size: var(--text-xs);
+}
+
+.webhook-guide-steps {
+  display: grid;
+  gap: 10px;
+  margin: 0 0 16px;
+  padding-left: 22px;
+  color: var(--muted);
+  font-size: var(--text-sm);
+  line-height: 1.5;
+}
+
+.webhook-guide-steps li {
+  padding-left: 4px;
+}
+
+.webhook-guide-steps strong {
+  color: var(--text);
+}
+
+.webhook-guide-steps code,
+.webhook-guide-payload code {
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: rgba(var(--accent-rgb), 0.1);
+  color: #dce8d8;
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-size: 0.92em;
+}
+
+.webhook-guide-payload-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+  color: var(--muted);
+  font-size: var(--text-xs);
+}
+
+.webhook-guide-payload-head button {
+  min-height: 32px;
+  padding: 0 12px;
+  border: 1px solid rgba(var(--accent-rgb), 0.24);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-bold);
+}
+
+.webhook-guide-payload-head button:hover {
+  border-color: rgba(var(--accent-rgb), 0.44);
+  color: var(--accent);
+}
+
+.webhook-guide-payload pre {
+  margin: 0 0 10px;
+  padding: 12px;
+  overflow-x: auto;
+  border: 1px solid rgba(var(--accent-rgb), 0.16);
+  border-radius: 7px;
+  background: var(--field);
+}
+
+.webhook-guide-payload pre code {
+  padding: 0;
+  background: transparent;
+  color: #dce8d8;
+  font-size: var(--text-xs);
+  line-height: 1.55;
+  white-space: pre;
+}
+
 /* ===== Transações: busca + exportação ===== */
 .transactions-tools {
   display: flex;

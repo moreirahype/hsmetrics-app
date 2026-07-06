@@ -410,10 +410,51 @@
       leads,
       conversations,
       accountBreakdown: Array.from(byAccount.entries()).map(([id, values]) => {
+        if (id === "unassigned") return Object.assign({ id: "manual", label: "Gasto manual" }, values);
         const account = accounts.find((item) => item.id === id);
         return Object.assign({ id: account?.external_id || id, label: account?.name || account?.external_id || id }, values);
       })
     };
+  }
+
+  async function saveManualAdSpend(dateIso, amountBrl) {
+    const context = await getContext();
+    const existing = await findOne("meta_daily_insights", {
+      workspace_id: `eq.${context.workspaceId}`,
+      date: `eq.${dateIso}`,
+      ad_account_id: "is.null"
+    });
+    const body = {
+      workspace_id: context.workspaceId,
+      ad_account_id: null,
+      date: dateIso,
+      spend_brl: Number(amountBrl) || 0,
+      updated_at: new Date().toISOString()
+    };
+    return existing
+      ? write("meta_daily_insights", "PATCH", body, { id: `eq.${existing.id}` })
+      : write("meta_daily_insights", "POST", body);
+  }
+
+  async function getManualAdSpend(range) {
+    const context = await getContext();
+    return rest("meta_daily_insights", {
+      select: "id,date,spend_brl",
+      workspace_id: `eq.${context.workspaceId}`,
+      ad_account_id: "is.null",
+      date: `gte.${isoDate(range.start)}`,
+      and: `(date.lte.${isoDate(range.end)})`,
+      order: "date.desc"
+    });
+  }
+
+  async function deleteManualAdSpend(dateIso) {
+    const context = await getContext();
+    return rest("meta_daily_insights", {
+      workspace_id: `eq.${context.workspaceId}`,
+      date: `eq.${dateIso}`,
+      ad_account_id: "is.null"
+    }, { method: "DELETE" });
   }
 
   async function findOne(table, params) {
@@ -824,6 +865,9 @@
     addSalesWebhook,
     removeSalesWebhook,
     regenerateSalesWebhook,
+    saveManualAdSpend,
+    getManualAdSpend,
+    deleteManualAdSpend,
     saveNotificationPreferences,
     setActiveWorkspace,
     createWorkspace,
