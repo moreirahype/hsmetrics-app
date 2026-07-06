@@ -864,12 +864,20 @@
 
   async function connectMetaAds() {
     if (!dataProvider) return;
+    const label = els.connectMetaButton.textContent;
     els.connectMetaButton.disabled = true;
+    els.connectMetaButton.textContent = "Conectando...";
+    if (els.metaConnectionStatus) els.metaConnectionStatus.textContent = "Abrindo a conexão com o Meta Ads...";
     try {
       await dataProvider.startMetaConnection();
     } catch (error) {
-      alert(error.message);
+      const message = (error && error.message) || "Não foi possível conectar agora.";
+      // Feedback na própria tela: no app instalado (iPhone) o alert nem sempre aparece.
+      if (els.metaConnectionStatus) els.metaConnectionStatus.textContent = message;
+      showNotificationSavedToast(message);
+      alert(message);
       els.connectMetaButton.disabled = false;
+      els.connectMetaButton.textContent = label;
     }
   }
 

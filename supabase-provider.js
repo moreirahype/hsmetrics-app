@@ -161,8 +161,9 @@
     const response = await fetch(`${supabaseUrl}${path}`, Object.assign({}, options, { headers }));
     if (response.status === 401 && retry && await refreshSession()) return api(path, options, false);
     const text = await response.text();
-    const payload = text ? JSON.parse(text) : null;
-    if (!response.ok) throw new Error(payload?.message || payload?.hint || payload?.details || `Banco respondeu ${response.status}.`);
+    let payload = null;
+    try { payload = text ? JSON.parse(text) : null; } catch { payload = { message: text }; }
+    if (!response.ok) throw new Error(payload?.error || payload?.message || payload?.hint || payload?.details || `Banco respondeu ${response.status}.`);
     return payload;
   }
 
