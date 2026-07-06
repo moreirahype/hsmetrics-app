@@ -68,9 +68,9 @@ function planFromAmount(payload: Record<string, any>) {
     "data.offer.price"
   ]);
   const amount = Number(String(raw ?? "").replace(",", "."));
-  if (Math.abs(amount - 49) < 0.01) return "start";
+  if (Math.abs(amount - 47) < 0.01) return "start";
   if (Math.abs(amount - 97) < 0.01) return "pro";
-  if (Math.abs(amount - 197) < 0.01) return "scale";
+  if (Math.abs(amount - 247) < 0.01) return "scale";
   return "";
 }
 
