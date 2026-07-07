@@ -1244,10 +1244,19 @@
     payload.set("meta_premio", els.addGoalPrize.value || "");
     payload.set("meta_ativa", "TRUE");
     payload.set("mutation_id", createMutationId("goal"));
-    await submitMutation(payload);
-    els.addGoalForm.reset();
-    showNotificationSavedToast("Meta adicionada");
-    await refreshData({ applySelection: true });
+    const submitButton = els.addGoalForm.querySelector("button[type='submit']");
+    if (submitButton) submitButton.disabled = true;
+    try {
+      await submitMutation(payload);
+      els.addGoalForm.reset();
+      showNotificationSavedToast("Meta adicionada");
+      await refreshData({ applySelection: true });
+    } catch (error) {
+      console.error(error);
+      alert(translatePlanError(error));
+    } finally {
+      if (submitButton) submitButton.disabled = false;
+    }
   }
 
   async function addAttendantFromForm(event) {
@@ -1263,10 +1272,19 @@
     payload.set("comissao_percentual", "0");
     payload.set("salario_fixo_mensal", "0");
     payload.set("mutation_id", createMutationId("attendant"));
-    await submitMutation(payload);
-    els.addAttendantForm.reset();
-    showNotificationSavedToast("Atendente adicionado");
-    await refreshData({ applySelection: true });
+    const submitButton = els.addAttendantForm.querySelector("button[type='submit']");
+    if (submitButton) submitButton.disabled = true;
+    try {
+      await submitMutation(payload);
+      els.addAttendantForm.reset();
+      showNotificationSavedToast("Atendente adicionado");
+      await refreshData({ applySelection: true });
+    } catch (error) {
+      console.error(error);
+      alert(translatePlanError(error));
+    } finally {
+      if (submitButton) submitButton.disabled = false;
+    }
   }
 
   async function addProductFromForm(event) {
@@ -1283,10 +1301,19 @@
     payload.set("custo_percentual", "0");
     payload.set("front", "FALSE");
     payload.set("mutation_id", createMutationId("product-cost"));
-    await submitMutation(payload);
-    els.addProductForm.reset();
-    showNotificationSavedToast("Produto adicionado");
-    await refreshData({ applySelection: true });
+    const submitButton = els.addProductForm.querySelector("button[type='submit']");
+    if (submitButton) submitButton.disabled = true;
+    try {
+      await submitMutation(payload);
+      els.addProductForm.reset();
+      showNotificationSavedToast("Produto adicionado");
+      await refreshData({ applySelection: true });
+    } catch (error) {
+      console.error(error);
+      alert(translatePlanError(error));
+    } finally {
+      if (submitButton) submitButton.disabled = false;
+    }
   }
 
   async function submitTransactionEdit(event) {
