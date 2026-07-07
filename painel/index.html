@@ -14,7 +14,7 @@
     <link rel="apple-touch-icon" sizes="192x192" href="../assets/icon-192.png?v=55">
     <link rel="apple-touch-icon" sizes="512x512" href="../assets/icon-512.png?v=55">
     <link rel="icon" href="../assets/icon-192.png?v=55" type="image/png">
-    <link rel="stylesheet" href="../styles.css?v=105">
+    <link rel="stylesheet" href="../styles.css?v=106">
   </head>
   <body class="auth-pending">
     <div class="app-shell">
@@ -594,10 +594,14 @@
                 <p>Se uma venda ainda não chega automaticamente, registre pela aba Transações. O painel salva data, hora, moeda, cliente, atendente e produto.</p>
                 <button class="integration-secondary-action settings-shortcut" data-page="transactions" type="button">Abrir lançamentos</button>
               </div>
-              <div class="integration-card">
-                <h2>Meta Ads</h2>
-                <p>Conecte sua conta para selecionar as contas de anúncio e acompanhar gastos, imposto, leads ou conversas no mesmo painel.</p>
-                <button class="integration-primary-action" id="connectMetaButton" type="button">Conectar Meta Ads</button>
+              <div class="integration-card meta-ads-card">
+                <div class="meta-ads-head">
+                  <div>
+                    <h2>Meta Ads</h2>
+                    <p>Conecte sua conta para selecionar as contas de anúncio e acompanhar gastos, imposto, leads ou conversas no mesmo painel.</p>
+                  </div>
+                  <button class="integration-primary-action" id="connectMetaButton" type="button">Conectar Meta Ads</button>
+                </div>
                 <p class="integration-status" id="metaConnectionStatus">Nenhuma conta conectada.</p>
                 <div class="integration-accounts" id="metaAccountsList"></div>
               </div>
@@ -755,7 +759,7 @@
     <script src="../config.js?v=106"></script>
     <script src="../supabase-provider.js?v=9"></script>
     <script src="../push-client.js?v=64"></script>
-    <script src="../app.js?v=107"></script>
+    <script src="../app.js?v=108"></script>
   </body>
 </html>
 

@@ -1616,7 +1616,8 @@
         commission: parseMoneyValue(item.comissao_percentual || item.commission || 0),
         salary: parseMoneyValue(item.salario_fixo_mensal || item.salary || 0),
         start: String(item.inicio_trabalho || item.start || "").trim(),
-        pauses: String(item.pausas || item.pauses || "").trim()
+        pauses: String(item.pausas || item.pauses || "").trim(),
+        manualSalesEnabled: parseBoolean(item.lancar_vendas != null ? item.lancar_vendas : item.manual_sales_enabled)
       }))
       .filter((item) => item.name || item.slug);
   }
@@ -2911,7 +2912,8 @@
       const salary = draftFieldValue(draftKey, "salary", decimal(attendant.salary || 0));
       const start = draftFieldValue(draftKey, "start", attendant.start || "");
       const pauses = draftFieldValue(draftKey, "pauses", attendant.pauses || "");
-      const manual = draftFieldValue(draftKey, "manual", state.manualSalePermissions.includes(key) ? "yes" : "no");
+      const manualEnabled = attendant.manualSalesEnabled || state.manualSalePermissions.includes(key);
+      const manual = draftFieldValue(draftKey, "manual", manualEnabled ? "yes" : "no");
       return `
         <div class="${settingsRowClasses("settings-table-row settings-attendant-row", draftKey)}" data-settings-draft-key="${escapeHtml(draftKey)}">
           <input data-attendant-field="name" value="${escapeHtml(name)}" aria-label="Nome" readonly>
