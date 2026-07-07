@@ -1,4 +1,4 @@
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+﻿import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -82,14 +82,14 @@ async function sendSalePush(
       body: showAttendant && attendantName && !/^sem atendente$/i.test(attendantName)
         ? `Valor: ${formatBrl(grossBrl)} • ${attendantName}`
         : `Valor: ${formatBrl(grossBrl)}`,
-      url: `${appUrl.replace(/\/$/, "")}/x7p4r9m2/#transactions`
+      url: `${appUrl.replace(/\/$/, "")}/painel/#transactions`
     });
   }
   if (attendantId) {
     targets.push({
       audience: `att-${attendantId}`,
       body: `Valor: ${formatBrl(grossBrl)}`,
-      url: `${appUrl.replace(/\/$/, "")}/k9v2m7q4/#transactions`
+      url: `${appUrl.replace(/\/$/, "")}/equipe/#transactions`
     });
   }
   await Promise.all(targets.map((target) =>

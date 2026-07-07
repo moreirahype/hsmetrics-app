@@ -1,7 +1,7 @@
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+﻿import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 function redirect(appUrl: string, status: string, detail = "") {
-  const target = new URL("./x7p4r9m2/#integrations", appUrl.endsWith("/") ? appUrl : `${appUrl}/`);
+  const target = new URL("./painel/#integrations", appUrl.endsWith("/") ? appUrl : `${appUrl}/`);
   target.searchParams.set("meta", status);
   if (detail) target.searchParams.set("detail", detail);
   return Response.redirect(target.toString(), 302);

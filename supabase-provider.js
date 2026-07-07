@@ -1,4 +1,4 @@
-(function () {
+﻿(function () {
   "use strict";
 
   const config = window.HSBI_CONFIG || {};
@@ -261,7 +261,7 @@
     }
     const context = await getContext();
     if (expectedRole === "owner" && context.role === "attendant") {
-      location.replace(new URL("../k9v2m7q4/", location.href));
+      location.replace(new URL("../equipe/", location.href));
       return null;
     }
     if (expectedRole === "owner" && config.enforceSubscription && context.subscription?.status !== "active") {
@@ -831,7 +831,7 @@
     const rows = await rpc("create_attendant_invite", { target_attendant_id: attendantId });
     const invite = Array.isArray(rows) ? rows[0] : rows;
     if (!invite?.invite_token) throw new Error("Não foi possível gerar o acesso da equipe.");
-    const url = new URL("./", location.origin + location.pathname.replace(/x7p4r9m2\/?$/, ""));
+    const url = new URL("./", location.origin + location.pathname.replace(/painel\/?$/, ""));
     url.searchParams.set("invite", invite.invite_token);
     return { url: url.toString(), expiresAt: invite.expires_at };
   }

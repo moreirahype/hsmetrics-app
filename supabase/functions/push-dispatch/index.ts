@@ -1,4 +1,4 @@
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+﻿import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 // Notificações de relatório (planos Pro e Scale).
 // Agende de hora em hora (minuto 0) com o header Authorization: Bearer <SYNC_SECRET>:
@@ -137,7 +137,7 @@ Deno.serve(async (request) => {
           title: variants.detailed.title,
           body: variants.detailed.body,
           variants,
-          url: `${appUrl}/x7p4r9m2/#dashboard`,
+          url: `${appUrl}/painel/#dashboard`,
           tag: `hsbi-report-${now.date}-${now.time}`
         })
       });

@@ -1,4 +1,4 @@
-﻿const CACHE_NAME = "hsmetrics-sales-app-v70";
+﻿const CACHE_NAME = "hsmetrics-sales-app-v71";
 const ASSETS = [
   "./",
   "./index.html",
@@ -15,10 +15,10 @@ const ASSETS = [
   "./push-client.js",
   "./config.js",
   "./manifest.webmanifest",
-  "./x7p4r9m2/",
-  "./x7p4r9m2/index.html",
-  "./k9v2m7q4/",
-  "./k9v2m7q4/index.html",
+  "./painel/",
+  "./painel/index.html",
+  "./equipe/",
+  "./equipe/index.html",
   "./assets/apple-touch-icon.png",
   "./assets/icon-192.png",
   "./assets/icon-512.png",

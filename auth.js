@@ -1,4 +1,4 @@
-(function () {
+﻿(function () {
   "use strict";
 
   const data = window.HSMData;
@@ -83,7 +83,7 @@
       location.replace(next);
       return;
     }
-    location.replace(context.role === "attendant" ? "./k9v2m7q4/" : "./x7p4r9m2/");
+    location.replace(context.role === "attendant" ? "./equipe/" : "./painel/");
   }
 
   async function recoverPassword() {

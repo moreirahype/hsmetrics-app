@@ -1,4 +1,4 @@
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+﻿import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 // Dispara o push de "Venda realizada!" para vendas registradas manualmente no app.
 // Chamada autenticada (JWT do usuário); valida que o usuário pertence ao workspace da venda.
@@ -81,14 +81,14 @@ Deno.serve(async (request) => {
         body: showAttendant && attendantName && !/^sem atendente$/i.test(attendantName)
           ? `Valor: ${formatBrl(Number(transaction.gross_amount_brl || 0))} • ${attendantName}`
           : `Valor: ${formatBrl(Number(transaction.gross_amount_brl || 0))}`,
-        url: `${appUrl}/x7p4r9m2/#transactions`
+        url: `${appUrl}/painel/#transactions`
       });
     }
     if (transaction.attendant_id) {
       targets.push({
         audience: `att-${transaction.attendant_id}`,
         body: `Valor: ${formatBrl(Number(transaction.gross_amount_brl || 0))}`,
-        url: `${appUrl}/k9v2m7q4/#transactions`
+        url: `${appUrl}/equipe/#transactions`
       });
     }
 

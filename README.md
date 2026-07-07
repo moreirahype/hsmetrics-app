@@ -1,12 +1,12 @@
-# HS Metrics App
+﻿# HS Metrics App
 
 PWA multiempresa do HS Metrics. O frontend usa Supabase Auth, Postgres com RLS e Edge Functions; não depende de Google Sheets ou Apps Script.
 
 ## Estrutura
 
 - `/`: login e criação de conta.
-- `/x7p4r9m2/`: painel do dono, protegido por autenticação.
-- `/k9v2m7q4/`: painel do atendente, protegido por autenticação e função.
+- `/painel/`: painel do dono, protegido por autenticação.
+- `/equipe/`: painel do atendente, protegido por autenticação e função.
 - `supabase/schema.sql`: schema inicial.
 - `supabase/migrations/20260629_commercial_foundation.sql`: segurança multiempresa, assinatura, limites e campos comerciais.
 - `supabase/migrations/20260629_attendant_invites.sql`: convites e acesso do app da equipe.

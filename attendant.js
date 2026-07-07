@@ -83,7 +83,7 @@
       const context = await dataProvider.requireAuth();
       if (!context) return;
       if (context.role !== "attendant") {
-        location.replace(new URL("../x7p4r9m2/", location.href));
+        location.replace(new URL("../painel/", location.href));
         return;
       }
     }
@@ -826,7 +826,7 @@
 
   function registerServiceWorker() {
     if ("serviceWorker" in navigator) {
-      navigator.serviceWorker.register("../sw.js?v=64").then((registration) => registration.update()).catch(console.error);
+      navigator.serviceWorker.register("../sw.js?v=65").then((registration) => registration.update()).catch(console.error);
     }
   }
 
