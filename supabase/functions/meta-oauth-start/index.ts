@@ -48,7 +48,9 @@ Deno.serve(async (request) => {
     url.searchParams.set("redirect_uri", redirectUri);
     url.searchParams.set("state", state);
     url.searchParams.set("response_type", "code");
-    url.searchParams.set("scope", "ads_read,business_management");
+    // Somente ads_read: leitura de gasto/leads/conversas das contas do usuário.
+    // Mantém o App Review simples (business_management exigiria verificação de negócio).
+    url.searchParams.set("scope", "ads_read");
     return Response.json({ url: url.toString() }, { headers: { ...corsHeaders, "Cache-Control": "no-store" } });
   } catch (error) {
     console.error(error);
