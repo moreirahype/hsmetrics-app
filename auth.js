@@ -74,8 +74,15 @@
   async function enterApp() {
     const inviteToken = query.get("invite") || localStorage.getItem(inviteStorageKey) || "";
     if (inviteToken) {
-      await data.acceptAttendantInvite(inviteToken);
+      // Sempre limpa o token, mesmo se falhar, para não travar logins futuros.
       localStorage.removeItem(inviteStorageKey);
+      try {
+        await data.acceptAttendantInvite(inviteToken);
+      } catch (error) {
+        // Convite inválido/expirado ou dono abrindo o próprio link não deve
+        // impedir o acesso: apenas seguimos para o painel normal.
+        console.warn("Convite não aplicado:", error && error.message);
+      }
     }
     const context = await data.getContext();
     const next = query.get("next");
