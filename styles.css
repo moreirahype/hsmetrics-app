@@ -358,7 +358,8 @@ body.sidebar-collapsed .sidebar-toggle {
 body[data-current-page="notifications"] .control-panel,
 body[data-current-page="integrations"] .control-panel,
 body[data-current-page="settings"] .control-panel,
-body[data-current-page="affiliate"] .control-panel {
+body[data-current-page="affiliate"] .control-panel,
+body[data-current-page="businesses"] .control-panel {
   display: none;
 }
 
@@ -3381,6 +3382,92 @@ body.sidebar-collapsed .plan-card {
 .webhook-row-actions button.is-danger:hover {
   border-color: rgba(255, 123, 114, 0.5);
   color: var(--danger);
+}
+
+/* ===== Meus negócios ===== */
+.businesses-list {
+  display: grid;
+  gap: 10px;
+  margin: 18px 0;
+}
+
+.business-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 16px;
+  border: 1px solid rgba(var(--accent-rgb), 0.16);
+  border-radius: var(--radius);
+  background: rgba(255, 255, 255, 0.018);
+}
+
+.business-row.is-active {
+  border-color: rgba(var(--accent-rgb), 0.4);
+  background: rgba(var(--accent-rgb), 0.05);
+}
+
+.business-row-info {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.business-row-info strong {
+  overflow: hidden;
+  color: var(--text);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.business-row-info small {
+  color: var(--accent);
+  font-size: var(--text-xs);
+}
+
+.business-row-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.business-row-actions button {
+  min-height: 36px;
+  padding: 0 14px;
+  border: 1px solid rgba(var(--accent-rgb), 0.2);
+  border-radius: 7px;
+  background: transparent;
+  color: var(--text);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-bold);
+}
+
+.business-row-actions button:hover {
+  border-color: rgba(var(--accent-rgb), .42);
+  color: var(--accent);
+}
+
+.business-row-actions button.is-danger {
+  border-color: rgba(255, 123, 114, 0.24);
+}
+
+.business-row-actions button.is-danger:hover {
+  border-color: rgba(255, 123, 114, 0.55);
+  color: var(--danger);
+  background: rgba(255, 123, 114, 0.08);
+}
+
+#addBusinessForm[hidden] {
+  display: none;
+}
+
+@media (max-width: 620px) {
+  .business-row {
+    grid-template-columns: 1fr;
+  }
+
+  .business-row-actions button {
+    flex: 1 1 0;
+  }
 }
 
 /* ===== Indique e ganhe (afiliados) ===== */

@@ -430,6 +430,117 @@
     });
   }
 
+  function initializeBusinesses() {
+    const form = document.getElementById("addBusinessForm");
+    if (!form || !dataProvider) return;
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const input = document.getElementById("addBusinessName");
+      const name = (input.value || "").trim();
+      if (!name) { alert("Informe o nome do negócio."); return; }
+      const limits = planLimits();
+      if ((state.workspaces || []).length >= limits.workspaces) {
+        alert(`Seu plano ${limits.label} permite até ${limits.workspaces} negócio(s). Faça upgrade para adicionar mais.`);
+        return;
+      }
+      const button = form.querySelector("button[type='submit']");
+      if (button) button.disabled = true;
+      try {
+        const createdId = await dataProvider.createWorkspace(name);
+        dataProvider.setActiveWorkspace(createdId);
+        location.reload();
+      } catch (error) {
+        alert(translatePlanError(error));
+        if (button) button.disabled = false;
+      }
+    });
+    renderBusinessesPage();
+  }
+
+  function renderBusinessesPage() {
+    const list = document.getElementById("businessesList");
+    if (!list) return;
+    const workspaces = state.workspaces || [];
+    const userId = state.context && state.context.user ? state.context.user.id : "";
+    // O negócio principal é o mais antigo do próprio dono (carrega a assinatura).
+    const owned = workspaces.filter((item) => item.owner_id === userId);
+    const rootId = owned.length ? owned[0].id : (workspaces[0] && workspaces[0].id);
+    list.innerHTML = workspaces.map((workspace) => {
+      const isMain = workspace.id === rootId;
+      const isActive = workspace.id === state.workspaceId;
+      return `
+        <div class="business-row${isActive ? " is-active" : ""}" data-id="${escapeHtml(workspace.id)}">
+          <div class="business-row-info">
+            <strong>${escapeHtml(workspace.name || "Negócio")}</strong>
+            <small>${isMain ? "Negócio principal" : ""}${isMain && isActive ? " · " : ""}${isActive ? "Em uso agora" : ""}</small>
+          </div>
+          <div class="business-row-actions">
+            <button type="button" data-business-rename="${escapeHtml(workspace.id)}">Renomear</button>
+            ${isMain ? "" : `<button type="button" class="is-danger" data-business-delete="${escapeHtml(workspace.id)}">Remover</button>`}
+          </div>
+        </div>`;
+    }).join("") || `<p class="settings-empty">Nenhum negócio encontrado.</p>`;
+
+    const limits = planLimits();
+    const note = document.getElementById("businessesLimitNote");
+    if (note) note.textContent = `Você usa ${integer(workspaces.length)} de ${integer(limits.workspaces)} negócio(s) do plano ${limits.label}.`;
+    const addForm = document.getElementById("addBusinessForm");
+    if (addForm) addForm.hidden = workspaces.length >= limits.workspaces;
+
+    list.querySelectorAll("[data-business-rename]").forEach((button) => {
+      button.addEventListener("click", async () => {
+        const workspace = workspaces.find((item) => item.id === button.dataset.businessRename);
+        const name = window.prompt("Novo nome do negócio:", workspace ? workspace.name : "");
+        if (name == null || !name.trim()) return;
+        button.disabled = true;
+        try {
+          await dataProvider.renameWorkspace(button.dataset.businessRename, name.trim());
+          const target = (state.workspaces || []).find((item) => item.id === button.dataset.businessRename);
+          if (target) target.name = name.trim();
+          if (button.dataset.businessRename === state.workspaceId && state.context && state.context.workspace) {
+            state.context.workspace.name = name.trim();
+          }
+          renderBusinessesPage();
+          renderWorkspaceSwitcher();
+          showNotificationSavedToast("Negócio renomeado");
+        } catch (error) {
+          alert(translatePlanError(error));
+        } finally {
+          button.disabled = false;
+        }
+      });
+    });
+
+    list.querySelectorAll("[data-business-delete]").forEach((button) => {
+      button.addEventListener("click", async () => {
+        const workspace = workspaces.find((item) => item.id === button.dataset.businessDelete);
+        if (!window.confirm(`Remover o negócio "${workspace ? workspace.name : ""}"? Todas as vendas, produtos, atendentes e dados dele serão apagados. Esta ação não pode ser desfeita.`)) return;
+        button.disabled = true;
+        try {
+          await dataProvider.deleteWorkspace(button.dataset.businessDelete);
+          if (button.dataset.businessDelete === state.workspaceId) {
+            location.reload();
+            return;
+          }
+          state.workspaces = (state.workspaces || []).filter((item) => item.id !== button.dataset.businessDelete);
+          renderBusinessesPage();
+          renderWorkspaceSwitcher();
+          showNotificationSavedToast("Negócio removido");
+        } catch (error) {
+          alert(translateBusinessError(error));
+          button.disabled = false;
+        }
+      });
+    });
+  }
+
+  function translateBusinessError(error) {
+    const message = String(error && error.message || error || "");
+    if (/cannot_delete_main_workspace/.test(message)) return "O negócio principal não pode ser removido, pois é ele que mantém sua assinatura.";
+    if (/not_owner/.test(message)) return "Apenas o dono do negócio pode removê-lo.";
+    return translatePlanError(error);
+  }
+
   function renderWorkspaceSwitcher() {
     if (!els.workspaceSwitch || !els.workspaceSelect) return;
     const limits = planLimits();
@@ -632,6 +743,7 @@
     initializeAffiliatePage();
     initializeWebhookGuide();
     initializeAdSpend();
+    initializeBusinesses();
     if (els.connectMetaButton) {
       els.connectMetaButton.addEventListener("click", connectMetaAds);
     }
@@ -2046,7 +2158,7 @@
   }
 
   function setPage(page) {
-    if (!["dashboard", "attendants", "products", "transactions", "goals", "settings-attendants", "settings-products", "integrations", "notifications", "settings", "affiliate"].includes(page)) return;
+    if (!["dashboard", "attendants", "products", "transactions", "goals", "settings-attendants", "settings-products", "integrations", "notifications", "settings", "affiliate", "businesses"].includes(page)) return;
     if (state.page === page) return;
     state.page = page;
     els.pages.forEach((section) => section.classList.toggle("is-active", section.dataset.page === page));

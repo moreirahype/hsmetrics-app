@@ -246,6 +246,23 @@
     return created?.workspace_id || created;
   }
 
+  async function renameWorkspace(workspaceId, name) {
+    const rows = await write("workspaces", "PATCH", {
+      name: String(name || "").trim() || "Negócio",
+      updated_at: new Date().toISOString()
+    }, { id: `eq.${workspaceId}` });
+    contextPromise = null;
+    return Array.isArray(rows) ? rows[0] : rows;
+  }
+
+  async function deleteWorkspace(workspaceId) {
+    await rpc("delete_workspace", { target_workspace_id: workspaceId });
+    if (localStorage.getItem(activeWorkspaceKey) === workspaceId) {
+      localStorage.removeItem(activeWorkspaceKey);
+    }
+    contextPromise = null;
+  }
+
   function loginUrl() {
     const root = new URL("../", location.href);
     root.searchParams.set("next", location.pathname + location.hash);
@@ -879,6 +896,8 @@
     saveNotificationPreferences,
     setActiveWorkspace,
     createWorkspace,
+    renameWorkspace,
+    deleteWorkspace,
     startMetaConnection,
     disconnectMeta,
     getIntegrationStatus,

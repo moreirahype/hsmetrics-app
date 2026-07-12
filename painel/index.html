@@ -14,7 +14,7 @@
     <link rel="apple-touch-icon" sizes="192x192" href="../assets/icon-192.png?v=55">
     <link rel="apple-touch-icon" sizes="512x512" href="../assets/icon-512.png?v=55">
     <link rel="icon" href="../assets/icon-192.png?v=55" type="image/png">
-    <link rel="stylesheet" href="../styles.css?v=107">
+    <link rel="stylesheet" href="../styles.css?v=108">
   </head>
   <body class="auth-pending">
     <div class="app-shell">
@@ -662,8 +662,22 @@
               <button class="settings-shortcut" data-page="settings-products" type="button">Produtos</button>
               <button class="settings-shortcut" data-page="integrations" type="button">Integrações</button>
               <button class="settings-shortcut" data-page="notifications" type="button">Notificações</button>
+              <button class="settings-shortcut" data-page="businesses" type="button">Meus negócios</button>
               <button class="settings-shortcut" data-page="affiliate" type="button">Indique e ganhe</button>
             </div>
+          </article>
+        </section>
+
+        <section class="page" id="page-businesses" data-page="businesses">
+          <article class="panel settings-panel">
+            <div class="panel-header"><h1>Meus negócios</h1></div>
+            <p class="settings-copy">Renomeie ou remova seus negócios. O negócio principal (o mais antigo) carrega sua assinatura e não pode ser removido.</p>
+            <div class="businesses-list" id="businessesList"></div>
+            <form class="settings-add-form compact" id="addBusinessForm">
+              <input id="addBusinessName" type="text" placeholder="Nome do novo negócio" autocomplete="off">
+              <button type="submit">Criar negócio</button>
+            </form>
+            <p class="settings-help" id="businessesLimitNote"></p>
           </article>
         </section>
 
@@ -760,9 +774,9 @@
       </nav>
     </div>
     <script src="../config.js?v=106"></script>
-    <script src="../supabase-provider.js?v=10"></script>
+    <script src="../supabase-provider.js?v=11"></script>
     <script src="../push-client.js?v=64"></script>
-    <script src="../app.js?v=109"></script>
+    <script src="../app.js?v=110"></script>
   </body>
 </html>
 
