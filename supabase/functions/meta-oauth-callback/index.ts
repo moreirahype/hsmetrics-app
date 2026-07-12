@@ -39,10 +39,30 @@ Deno.serve(async (request) => {
     const tokenPayload = await tokenResponse.json();
     if (!tokenResponse.ok || !tokenPayload.access_token) throw new Error(tokenPayload?.error?.message || "Meta nao retornou um token valido.");
 
+    // O token do code é de curta duração (~1-2h). Troca por um de longa duração
+    // (~60 dias) para que a sincronização diária de gastos continue funcionando.
+    let accessToken = tokenPayload.access_token as string;
+    try {
+      const exchangeUrl = new URL("https://graph.facebook.com/v25.0/oauth/access_token");
+      exchangeUrl.searchParams.set("grant_type", "fb_exchange_token");
+      exchangeUrl.searchParams.set("client_id", Deno.env.get("META_APP_ID") || "");
+      exchangeUrl.searchParams.set("client_secret", Deno.env.get("META_APP_SECRET") || "");
+      exchangeUrl.searchParams.set("fb_exchange_token", accessToken);
+      const exchangeResponse = await fetch(exchangeUrl);
+      const exchangePayload = await exchangeResponse.json();
+      if (exchangeResponse.ok && exchangePayload.access_token) {
+        accessToken = exchangePayload.access_token;
+      } else {
+        console.warn("Falha ao obter token de longa duracao, usando o curto", exchangePayload?.error?.message);
+      }
+    } catch (exchangeError) {
+      console.warn("Erro ao trocar por token de longa duracao", exchangeError);
+    }
+
     const accountsUrl = new URL("https://graph.facebook.com/v25.0/me/adaccounts");
     accountsUrl.searchParams.set("fields", "id,name,account_status");
     accountsUrl.searchParams.set("limit", "200");
-    accountsUrl.searchParams.set("access_token", tokenPayload.access_token);
+    accountsUrl.searchParams.set("access_token", accessToken);
     const accountsResponse = await fetch(accountsUrl);
     const accountsPayload = await accountsResponse.json();
     if (!accountsResponse.ok) throw new Error(accountsPayload?.error?.message || "Nao foi possivel listar as contas de anuncio.");
@@ -50,7 +70,7 @@ Deno.serve(async (request) => {
     const { error: secretError } = await service.from("integration_secrets").upsert({
       workspace_id: storedState.workspace_id,
       provider: "meta",
-      secrets: { access_token: tokenPayload.access_token },
+      secrets: { access_token: accessToken },
       updated_at: new Date().toISOString()
     }, { onConflict: "workspace_id,provider" });
     if (secretError) throw secretError;
