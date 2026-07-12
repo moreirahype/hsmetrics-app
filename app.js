@@ -142,6 +142,7 @@
     copyWebhookButton: document.getElementById("copyWebhookButton"),
     regenerateWebhookButton: document.getElementById("regenerateWebhookButton"),
     connectMetaButton: document.getElementById("connectMetaButton"),
+    disconnectMetaButton: document.getElementById("disconnectMetaButton"),
     metaConnectionStatus: document.getElementById("metaConnectionStatus"),
     metaAccountsList: document.getElementById("metaAccountsList"),
     attendantAccessLinks: document.getElementById("attendantAccessLinks"),
@@ -634,6 +635,9 @@
     if (els.connectMetaButton) {
       els.connectMetaButton.addEventListener("click", connectMetaAds);
     }
+    if (els.disconnectMetaButton) {
+      els.disconnectMetaButton.addEventListener("click", disconnectMetaAds);
+    }
     els.transactionSearch.addEventListener("input", () => {
       state.pageIndex = 1;
       renderTransactions();
@@ -820,12 +824,14 @@
         dataProvider.getAdAccounts()
       ]);
       renderSalesWebhooks(webhooks);
+      const metaConnected = metaIntegration?.status === "active" || (adAccounts || []).length > 0;
       if (els.metaConnectionStatus) {
-        const count = Number(metaIntegration?.settings?.account_count || 0);
-        els.metaConnectionStatus.textContent = metaIntegration?.status === "active"
+        const count = Number(metaIntegration?.settings?.account_count || (adAccounts || []).length || 0);
+        els.metaConnectionStatus.textContent = metaConnected
           ? `${count || ""} ${count === 1 ? "conta conectada" : "contas conectadas"}`.trim()
           : "Nenhuma conta conectada.";
       }
+      updateMetaConnectionButtons(metaConnected);
       renderMetaAccounts(adAccounts);
       renderAttendantAccessLinks();
     } catch (error) {
@@ -1038,6 +1044,36 @@
       alert(message);
       els.connectMetaButton.disabled = false;
       els.connectMetaButton.textContent = label;
+    }
+  }
+
+  function updateMetaConnectionButtons(isConnected) {
+    if (els.connectMetaButton) {
+      els.connectMetaButton.textContent = isConnected ? "Reconectar" : "Conectar Meta Ads";
+    }
+    if (els.disconnectMetaButton) {
+      els.disconnectMetaButton.hidden = !isConnected;
+    }
+  }
+
+  async function disconnectMetaAds() {
+    if (!dataProvider) return;
+    if (!window.confirm("Desconectar o Meta Ads? As contas conectadas e os gastos sincronizados serão removidos, e o acesso do app à sua conta do Meta será revogado. Você pode reconectar quando quiser.")) return;
+    const label = els.disconnectMetaButton.textContent;
+    els.disconnectMetaButton.disabled = true;
+    els.disconnectMetaButton.textContent = "Desconectando...";
+    try {
+      await dataProvider.disconnectMeta();
+      if (els.metaAccountsList) els.metaAccountsList.innerHTML = "";
+      if (els.metaConnectionStatus) els.metaConnectionStatus.textContent = "Nenhuma conta conectada.";
+      updateMetaConnectionButtons(false);
+      showNotificationSavedToast("Meta Ads desconectado");
+      await refreshData({ applySelection: true });
+    } catch (error) {
+      alert(translatePlanError(error));
+    } finally {
+      els.disconnectMetaButton.disabled = false;
+      els.disconnectMetaButton.textContent = label;
     }
   }
 

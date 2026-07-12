@@ -802,6 +802,14 @@
     location.assign(payload.url);
   }
 
+  async function disconnectMeta() {
+    const context = await getContext();
+    return api("/functions/v1/meta-disconnect", {
+      method: "POST",
+      body: JSON.stringify({ workspace_id: context.workspaceId })
+    });
+  }
+
   async function getIntegrationStatus(provider) {
     const context = await getContext();
     return findOne("integrations", {
@@ -872,6 +880,7 @@
     setActiveWorkspace,
     createWorkspace,
     startMetaConnection,
+    disconnectMeta,
     getIntegrationStatus,
     getAdAccounts,
     setAdAccountActive,

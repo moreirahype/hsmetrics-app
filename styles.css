@@ -1324,6 +1324,35 @@ tr:hover .transaction-edit-button,
   white-space: nowrap;
 }
 
+.meta-ads-actions {
+  display: flex;
+  flex: 0 0 auto;
+  align-self: center;
+  gap: 8px;
+}
+
+.meta-ads-actions .integration-primary-action,
+.meta-ads-actions .integration-secondary-action {
+  margin-top: 0;
+  align-self: center;
+  white-space: nowrap;
+}
+
+.integration-secondary-action.is-danger {
+  border-color: rgba(255, 123, 114, 0.32);
+  color: #ff9c95;
+}
+
+.integration-secondary-action.is-danger:hover {
+  border-color: rgba(255, 123, 114, 0.6);
+  color: var(--danger);
+  background: rgba(255, 123, 114, 0.08);
+}
+
+.integration-secondary-action[hidden] {
+  display: none;
+}
+
 .meta-ads-card .integration-accounts {
   grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
   gap: 10px;
@@ -1350,6 +1379,16 @@ tr:hover .transaction-edit-button,
   .meta-ads-head .integration-primary-action {
     align-self: stretch;
     width: 100%;
+  }
+
+  .meta-ads-actions {
+    align-self: stretch;
+    width: 100%;
+  }
+
+  .meta-ads-actions .integration-primary-action,
+  .meta-ads-actions .integration-secondary-action {
+    flex: 1 1 0;
   }
 }
 
