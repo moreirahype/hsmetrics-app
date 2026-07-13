@@ -356,7 +356,7 @@
   async function fetchTransactionsPayload(range) {
     const { context, transactions, products, attendants, goals } = await getWorkspaceCollections(range);
     const activeProducts = products.filter((item) => item.active !== false && !item.deleted_at);
-    const activeAttendants = attendants.filter((item) => item.active !== false && !item.deleted_at);
+    const activeAttendants = attendants.filter((item) => item.active !== false && !item.deleted_at && String(item.name || "").trim());
     return {
       transactions: transactions.map((row) => mapTransaction(row, products, attendants)),
       costs: activeProducts.map((item) => ({
@@ -658,7 +658,7 @@
   async function fetchAttendantPayload(range) {
     const context = await getContext();
     const attendants = await rest("attendants", { select: "*", workspace_id: `eq.${context.workspaceId}`, user_id: `eq.${context.user.id}`, limit: 1 });
-    const attendant = attendants[0];
+    const attendant = attendants.find((item) => item.active !== false && !item.deleted_at && String(item.name || "").trim());
     if (!attendant) throw new Error("Seu usuário ainda não foi vinculado a um atendente.");
     const { from, to } = rangeBounds(range);
     const [transactions, goals] = await Promise.all([

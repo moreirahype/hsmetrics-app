@@ -1086,7 +1086,7 @@
       `;
       return;
     }
-    const attendants = (state.attendantConfigs || []).filter((item) => item.id);
+    const attendants = (state.attendantConfigs || []).filter((item) => item.id && item.name);
     if (!attendants.length) {
       els.attendantAccessLinks.innerHTML = `<p class="integration-status">Cadastre um atendente para gerar o acesso individual.</p>`;
       return;
@@ -1780,7 +1780,7 @@
         pauses: String(item.pausas || item.pauses || "").trim(),
         manualSalesEnabled: parseBoolean(item.lancar_vendas != null ? item.lancar_vendas : item.manual_sales_enabled)
       }))
-      .filter((item) => item.name || item.slug);
+      .filter((item) => item.name);
   }
 
   function normalizeGoalConfigs(goals) {
@@ -3294,14 +3294,9 @@
   function getConfigAttendantRows() {
     const byName = new Map();
     (state.attendantConfigs || []).forEach((item) => {
-      const name = item.name || item.slug;
+      const name = item.name;
       if (!name || normalizeFilterValue(name) === "sem-atendente") return;
       byName.set(normalizeFilterValue(name), Object.assign({ name }, item));
-    });
-    getAttendantSelectOptions("").forEach((name) => {
-      if (!name || name === "Sem atendente") return;
-      const key = normalizeFilterValue(name);
-      if (!byName.has(key)) byName.set(key, { name, commission: 0, salary: 0, start: "", pauses: "" });
     });
     return Array.from(byName.values()).sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
   }
@@ -3800,7 +3795,7 @@
   function buildAttendantConfigMap() {
     const map = new Map();
     (state.attendantConfigs || []).forEach((config) => {
-      const name = config.name || config.slug;
+      const name = config.name;
       if (name) map.set(normalizeFilterValue(name), config);
     });
     return map;
