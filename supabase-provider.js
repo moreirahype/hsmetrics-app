@@ -411,7 +411,15 @@
     let spend = 0;
     let leads = 0;
     let conversations = 0;
+    // O gasto do Meta (conta real) tem prioridade sobre o manual no mesmo dia:
+    // se o dia já foi sincronizado pelo Meta, o lançamento manual daquele dia é
+    // ignorado, evitando contar em dobro.
+    const daysWithRealSpend = new Set(
+      insights.filter((row) => row.ad_account_id).map((row) => String(row.date).slice(0, 10))
+    );
     insights.forEach((row) => {
+      const isManual = !row.ad_account_id;
+      if (isManual && daysWithRealSpend.has(String(row.date).slice(0, 10))) return;
       spend += Number(row.spend_brl || 0);
       leads += Number(row.leads || 0);
       conversations += Number(row.conversations || 0);
