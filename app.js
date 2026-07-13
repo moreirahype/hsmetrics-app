@@ -713,7 +713,7 @@
       if (hasAnyDrafts()) {
         savePendingDrafts();
       } else {
-        refreshData({ applySelection: true, buttonLoading: true });
+        refreshData({ applySelection: true, buttonLoading: true, syncMeta: true });
       }
     });
     if (els.discardDraftsButton) {
@@ -1229,6 +1229,15 @@
     els.refreshButton.disabled = true;
     setRefreshButtonLoading(Boolean(options.buttonLoading));
     try {
+      // No clique manual em "Atualizar", busca os gastos mais recentes no Meta
+      // antes de reler os dados. É best-effort: se falhar, segue com o banco.
+      if (options.syncMeta && dataProvider && dataProvider.syncMetaNow) {
+        try {
+          await dataProvider.syncMetaNow();
+        } catch (syncError) {
+          console.warn("Sincronização do Meta não concluída:", syncError && syncError.message);
+        }
+      }
       const range = getPreloadRange();
       const payload = await fetchTransactionsPayload(range);
       const metaEntries = await Promise.all(

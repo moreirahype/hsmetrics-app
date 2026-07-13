@@ -835,6 +835,14 @@
     });
   }
 
+  async function syncMetaNow() {
+    const context = await getContext();
+    return api("/functions/v1/meta-sync-now", {
+      method: "POST",
+      body: JSON.stringify({ workspace_id: context.workspaceId })
+    });
+  }
+
   async function getIntegrationStatus(provider) {
     const context = await getContext();
     return findOne("integrations", {
@@ -908,6 +916,7 @@
     deleteWorkspace,
     startMetaConnection,
     disconnectMeta,
+    syncMetaNow,
     getIntegrationStatus,
     getAdAccounts,
     setAdAccountActive,
