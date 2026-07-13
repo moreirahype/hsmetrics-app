@@ -36,6 +36,7 @@
     pages: document.querySelectorAll(".page"),
     navItems: document.querySelectorAll(".nav-item, .bottom-item"),
     periodButtons: document.querySelectorAll(".period-button"),
+    mobilePeriodSelect: document.getElementById("mobilePeriodSelect"),
     customFields: document.getElementById("customFields"),
     startDate: document.getElementById("startDate"),
     endDate: document.getElementById("endDate"),
@@ -100,15 +101,11 @@
   function bindEvents() {
     els.navItems.forEach((button) => button.addEventListener("click", () => setPage(button.dataset.page)));
     els.periodButtons.forEach((button) => {
-      button.addEventListener("click", () => {
-        if (state.period === button.dataset.period) return;
-        state.period = button.dataset.period;
-        state.pageIndex = 1;
-        if (state.period !== "custom") state.appliedPeriod = state.period;
-        if (state.page === "dashboard" && state.period !== "custom") state.animateDashboard = true;
-        render();
-      });
+      button.addEventListener("click", () => setPeriod(button.dataset.period));
     });
+    if (els.mobilePeriodSelect) {
+      els.mobilePeriodSelect.addEventListener("change", () => setPeriod(els.mobilePeriodSelect.value));
+    }
     [els.startDate, els.endDate].forEach((input) => {
       input.addEventListener("change", () => {
         state.pageIndex = 1;
@@ -165,6 +162,8 @@
       }
     });
     document.addEventListener("pointerdown", (event) => {
+      if (event.target.closest(".custom-select")) return;
+      closeCustomSelects();
       if (!event.target.closest(".chart-point")) {
         hideTooltip(els.tooltip);
         hideTooltip(els.dailyTooltip);
@@ -355,10 +354,87 @@
       state.animateDashboard = false;
     }
     renderTransactions();
+    refreshCustomSelects();
+  }
+
+  function setPeriod(period) {
+    if (state.period === period) return;
+    state.period = period;
+    state.pageIndex = 1;
+    if (state.period !== "custom") state.appliedPeriod = state.period;
+    if (state.page === "dashboard" && state.period !== "custom") state.animateDashboard = true;
+    render();
+  }
+
+  function refreshCustomSelects() {
+    document.querySelectorAll("select").forEach(enhanceSelect);
+  }
+
+  function enhanceSelect(select) {
+    if (!select || select.dataset.nativeOnly === "true") return;
+    let custom = select.nextElementSibling;
+    if (!custom || !custom.classList || !custom.classList.contains("custom-select")) {
+      custom = document.createElement("div");
+      custom.className = "custom-select";
+      custom.innerHTML = `
+        <button class="custom-select-button" type="button" aria-haspopup="listbox" aria-expanded="false">
+          <span></span>
+          <i aria-hidden="true"></i>
+        </button>
+        <div class="custom-select-menu" role="listbox"></div>
+      `;
+      select.insertAdjacentElement("afterend", custom);
+      select.classList.add("native-hidden-select");
+      select.setAttribute("aria-hidden", "true");
+      select.tabIndex = -1;
+      custom.querySelector("button").addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        if (select.disabled) return;
+        const isOpen = custom.classList.contains("is-open");
+        closeCustomSelects(custom);
+        custom.classList.toggle("is-open", !isOpen);
+        custom.querySelector("button").setAttribute("aria-expanded", String(!isOpen));
+      });
+    }
+    custom.classList.toggle("is-disabled", select.disabled);
+    custom.dataset.value = select.value;
+    const buttonText = custom.querySelector(".custom-select-button span");
+    const selectedOption = select.options[select.selectedIndex] || select.options[0];
+    buttonText.textContent = selectedOption ? selectedOption.textContent : "";
+    const menu = custom.querySelector(".custom-select-menu");
+    const optionSignature = Array.from(select.options).map((option) => `${option.value}:${option.textContent}:${option.selected}`).join("|");
+    if (menu.dataset.signature === optionSignature) return;
+    menu.dataset.signature = optionSignature;
+    menu.innerHTML = Array.from(select.options).map((option) => `
+      <button class="custom-select-option ${option.selected ? "is-selected" : ""}" type="button" role="option" aria-selected="${option.selected ? "true" : "false"}" data-value="${escapeHtml(option.value)}">
+        ${escapeHtml(option.textContent)}
+      </button>
+    `).join("");
+    menu.querySelectorAll(".custom-select-option").forEach((optionButton) => {
+      optionButton.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        select.value = optionButton.dataset.value;
+        select.dispatchEvent(new Event("change", { bubbles: true }));
+        closeCustomSelects();
+        enhanceSelect(select);
+      });
+    });
+  }
+
+  function closeCustomSelects(except) {
+    document.querySelectorAll(".custom-select.is-open").forEach((custom) => {
+      if (custom === except) return;
+      custom.classList.remove("is-open");
+      const button = custom.querySelector(".custom-select-button");
+      if (button) button.setAttribute("aria-expanded", "false");
+    });
   }
 
   function renderPeriodControls() {
     els.periodButtons.forEach((button) => button.classList.toggle("is-active", button.dataset.period === state.period));
+    if (els.mobilePeriodSelect) els.mobilePeriodSelect.value = state.period;
     els.customFields.classList.toggle("is-visible", state.period === "custom");
     document.getElementById("salesChartPeriod").textContent = getPeriodName(state.appliedPeriod);
     document.getElementById("dailySalesChartPeriod").textContent = getPeriodName(getDailyChartPeriod());

@@ -69,6 +69,17 @@
             <button class="period-button" data-period="lastMonth" type="button">Mês passado</button>
             <button class="period-button" data-period="custom" type="button">Personalizado</button>
           </div>
+          <label class="mobile-period-control">
+            <span>Período</span>
+            <select id="mobilePeriodSelect" aria-label="Selecionar período">
+              <option value="today">Hoje</option>
+              <option value="yesterday">Ontem</option>
+              <option value="last7">Últimos 7 dias</option>
+              <option value="month">Este mês</option>
+              <option value="lastMonth">Mês passado</option>
+              <option value="custom">Personalizado</option>
+            </select>
+          </label>
           <div class="custom-fields" id="customFields">
             <label>
               <span>Início</span>
@@ -191,12 +202,13 @@
       </nav>
     </div>
     <script src="../config.js?v=106"></script>
-    <script src="../supabase-provider.js?v=13"></script>
+    <script src="../supabase-provider.js?v=14"></script>
     <script src="../push-client.js?v=64"></script>
     <script>
       window.HSBI_ATTENDANT_CONFIG = { slug: "attendant", name: "" };
     </script>
-    <script src="../attendant.js?v=75"></script>
+    <script src="../attendant.js?v=76"></script>
   </body>
 </html>
+
 

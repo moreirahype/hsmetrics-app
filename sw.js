@@ -1,4 +1,4 @@
-﻿const CACHE_NAME = "hsmetrics-sales-app-v79";
+﻿const CACHE_NAME = "hsmetrics-sales-app-v81";
 const ASSETS = [
   "./",
   "./index.html",
@@ -87,4 +87,5 @@ self.addEventListener("notificationclick", (event) => {
     })
   );
 });
+
 

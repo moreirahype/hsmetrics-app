@@ -874,6 +874,8 @@
     if (!invite?.invite_token) throw new Error("Não foi possível gerar o acesso da equipe.");
     const url = new URL("./", location.origin + location.pathname.replace(/painel\/?$/, ""));
     url.searchParams.set("invite", invite.invite_token);
+    url.searchParams.set("equipe", "1");
+    url.searchParams.set("next", "/equipe/");
     return { url: url.toString(), expiresAt: invite.expires_at };
   }
 

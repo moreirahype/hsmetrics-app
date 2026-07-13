@@ -56,6 +56,9 @@ button, input { font: inherit; }
 }
 
 .activation-panel[hidden] { display: none; }
+.team-panel {
+  background: linear-gradient(180deg, rgba(157, 231, 112, .1), rgba(17, 26, 17, .82));
+}
 .activation-pill {
   display: inline-flex;
   align-items: center;
@@ -143,7 +146,8 @@ button, input { font: inherit; }
   cursor: pointer;
 }
 .auth-submit:disabled { cursor: wait; opacity: .68; }
-.auth-recover {
+.auth-recover,
+.auth-switch {
   display: block;
   margin: 18px auto 0;
   padding: 4px;
@@ -152,7 +156,13 @@ button, input { font: inherit; }
   color: var(--muted);
   cursor: pointer;
 }
-.auth-recover:hover { color: var(--accent); }
+.auth-switch {
+  margin-top: 10px;
+}
+.auth-recover:hover,
+.auth-switch:hover {
+  color: var(--accent);
+}
 
 @media (max-width: 720px) {
   body { align-items: start; padding: max(30px, env(safe-area-inset-top)) 18px max(30px, env(safe-area-inset-bottom)); }

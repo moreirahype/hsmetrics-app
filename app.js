@@ -1097,7 +1097,10 @@
         <span><strong>${escapeHtml(attendant.name || attendant.slug)}</strong><small>${attendant.userId ? "Acesso vinculado" : "Aguardando primeiro acesso"}</small></span>
         <button type="button" data-create-attendant-invite="${escapeHtml(attendant.id)}" data-linked="${attendant.userId ? "1" : "0"}">${attendant.userId ? "Novo link" : "Gerar link"}</button>
       </div>
-    `).join("") + `<p class="integration-status">${integer(linkedCount)} de ${integer(limits.teamUsers)} acessos do plano ${limits.label} em uso.</p>`;
+    `).join("") + `
+      <p class="integration-status">${integer(linkedCount)} de ${integer(limits.teamUsers)} acessos do plano ${limits.label} em uso.</p>
+      <p class="integration-status">Primeiro acesso: a atendente abre o link, cria uma senha e entra. "Esqueci senha" só serve depois que uma conta já existe.</p>
+    `;
     els.attendantAccessLinks.querySelectorAll("[data-create-attendant-invite]").forEach((button) => {
       button.addEventListener("click", async () => {
         if (button.dataset.linked !== "1" && linkedCount >= limits.teamUsers) {
@@ -1110,7 +1113,7 @@
         try {
           const invite = await dataProvider.createAttendantInvite(button.dataset.createAttendantInvite);
           await navigator.clipboard.writeText(invite.url);
-          showNotificationSavedToast("Link da equipe copiado");
+          showNotificationSavedToast("Link copiado. Envie para a atendente.");
         } catch (error) {
           alert(translatePlanError(error) || "Não foi possível gerar o link agora.");
         } finally {

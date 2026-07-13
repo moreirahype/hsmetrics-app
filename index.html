@@ -6,7 +6,7 @@
     <meta name="theme-color" content="#0e120d">
     <title>Entrar | HS Metrics</title>
     <link rel="icon" href="./assets/icon-192.png" type="image/png">
-    <link rel="stylesheet" href="./auth.css?v=4">
+    <link rel="stylesheet" href="./auth.css?v=5">
   </head>
   <body>
     <main class="auth-shell">
@@ -34,6 +34,20 @@
           </p>
         </div>
 
+        <div class="activation-panel team-panel" id="teamActivationPanel" hidden>
+          <span class="activation-pill">Acesso da equipe</span>
+          <h1>Crie sua senha para entrar</h1>
+          <p>
+            Você recebeu um link individual para acompanhar seus resultados no HS Metrics.
+            Informe seu e-mail, crie uma senha e o acesso será vinculado automaticamente à sua conta de atendente.
+          </p>
+          <ul>
+            <li>Use um e-mail que você consiga acessar depois.</li>
+            <li>Se você já criou uma senha antes, clique em “Já tenho senha”.</li>
+            <li>“Esqueci minha senha” só serve para recuperar uma conta já criada.</li>
+          </ul>
+        </div>
+
         <div class="auth-heading">
           <h1 id="authTitle">Acesse seu painel</h1>
           <p id="authSubtitle">Entre com o e-mail usado na compra.</p>
@@ -53,10 +67,12 @@
         </form>
 
         <button class="auth-recover" id="authRecover" type="button">Esqueci minha senha</button>
+        <button class="auth-switch" id="authSwitch" type="button" hidden>Já tenho senha</button>
       </section>
     </main>
     <script src="./config.js?v=106"></script>
-    <script src="./supabase-provider.js?v=13"></script>
-    <script src="./auth.js?v=7"></script>
+    <script src="./supabase-provider.js?v=14"></script>
+    <script src="./auth.js?v=8"></script>
   </body>
 </html>
+
