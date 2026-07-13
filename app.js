@@ -2050,6 +2050,34 @@
     els.manualSaleProduct.value = values.includes(current) ? current : values[0];
   }
 
+  function getGoalAttendantOptions(extraValue = "") {
+    const unique = new Set();
+    getConfigAttendantRows().forEach((attendant) => {
+      const name = String(attendant.name || "").trim();
+      if (name) unique.add(name);
+    });
+    const extra = String(extraValue || "").trim();
+    if (extra) unique.add(extra);
+    return Array.from(unique).sort((a, b) => a.localeCompare(b, "pt-BR"));
+  }
+
+  function goalAttendantOptionsHtml(selectedValue = "", options = {}) {
+    const selected = String(selectedValue || "").trim();
+    const placeholder = options.includePlaceholder ? '<option value="">Selecione um atendente</option>' : "";
+    const list = getGoalAttendantOptions(selected)
+      .map((name) => `<option value="${escapeHtml(name)}" ${name === selected ? "selected" : ""}>${escapeHtml(name)}</option>`)
+      .join("");
+    return `${placeholder}${list}`;
+  }
+
+  function renderGoalAttendantOptions() {
+    if (!els.addGoalAttendant) return;
+    const current = els.addGoalAttendant.value || "";
+    const available = getGoalAttendantOptions();
+    els.addGoalAttendant.innerHTML = goalAttendantOptionsHtml(current, { includePlaceholder: true });
+    els.addGoalAttendant.value = available.includes(current) ? current : "";
+  }
+
   function uniqueManualOptionValues(field, fallback) {
     const unique = new Set([fallback]);
     normalizeManualSaleOptions(state.manualSaleOptions).forEach((option) => {
@@ -2911,6 +2939,7 @@
   }
 
   function renderSettingsPages() {
+    renderGoalAttendantOptions();
     renderGoalSettings();
     renderLeadMetricOptions();
     renderAttendantCostOptions();
@@ -2990,7 +3019,9 @@
       const active = draftFieldValue(key, "active", goal.active ? "TRUE" : "FALSE");
       return `
       <div class="${settingsRowClasses("settings-table-row settings-goal-row", key)}" data-settings-draft-key="${escapeHtml(key)}">
-        <input data-goal-field="slug" value="${escapeHtml(slug)}" aria-label="Atendente" readonly>
+        <select data-goal-field="slug" aria-label="Atendente" disabled>
+          ${goalAttendantOptionsHtml(slug)}
+        </select>
         <input data-goal-field="title" value="${escapeHtml(title)}" aria-label="Meta" readonly>
         <input data-goal-field="value" value="${escapeHtml(value)}" inputmode="decimal" aria-label="Valor" readonly>
         <input data-goal-field="prize" value="${escapeHtml(prize)}" aria-label="Prêmio" readonly>
@@ -3203,7 +3234,7 @@
     const prize = getSettingsFieldValue(row, "[data-goal-field='prize']", button.dataset.prize || "");
     const active = getSettingsFieldValue(row, "[data-goal-field='active']", button.dataset.active === "true" ? "TRUE" : "FALSE");
     if (!slug.trim()) {
-      alert("Informe o slug da atendente.");
+      alert("Selecione o atendente da meta.");
       return;
     }
     if (!title.trim()) {

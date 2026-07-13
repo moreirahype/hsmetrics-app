@@ -450,7 +450,9 @@
             <p class="settings-copy">Cadastre título, valor, prêmio e status das metas que aparecem no app da atendente.</p>
             <input class="settings-search" id="goalsSearch" type="search" placeholder="Buscar meta ou atendente">
             <form class="settings-add-form" id="addGoalForm">
-              <input id="addGoalAttendant" type="text" placeholder="Atendente">
+              <select id="addGoalAttendant" aria-label="Atendente">
+                <option value="">Selecione um atendente</option>
+              </select>
               <input id="addGoalTitle" type="text" placeholder="Título da meta">
               <input id="addGoalValue" type="text" inputmode="decimal" placeholder="Valor">
               <input id="addGoalPrize" type="text" placeholder="Prêmio">
@@ -781,7 +783,7 @@
     <script src="../config.js?v=106"></script>
     <script src="../supabase-provider.js?v=14"></script>
     <script src="../push-client.js?v=64"></script>
-    <script src="../app.js?v=114"></script>
+    <script src="../app.js?v=115"></script>
   </body>
 </html>
 
