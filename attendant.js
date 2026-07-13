@@ -17,12 +17,14 @@
     goals: [],
     displayTransactions: [],
     filteredSales: [],
+    manualSaleOptions: [],
     attendant: {
       nome: pageConfig.name,
       comissao_percentual: null,
       salario_fixo_mensal: 0,
       inicio_trabalho: "",
-      pausas: ""
+      pausas: "",
+      lancar_vendas: false
     },
     pageIndex: 1,
     lastUpdated: null,
@@ -54,6 +56,16 @@
     sidebarToggle: document.getElementById("sidebarToggle"),
     saleNotifications: document.getElementById("saleNotifications"),
     testNotification: document.getElementById("testNotification"),
+    manualSalePanel: document.getElementById("attendantManualSalePanel"),
+    manualSaleForm: document.getElementById("manualSaleForm"),
+    manualSaleValue: document.getElementById("manualSaleValue"),
+    manualSaleCurrency: document.getElementById("manualSaleCurrency"),
+    manualSalePayer: document.getElementById("manualSalePayer"),
+    manualSalePhone: document.getElementById("manualSalePhone"),
+    manualSaleProduct: document.getElementById("manualSaleProduct"),
+    manualSaleDate: document.getElementById("manualSaleDate"),
+    manualSaleTime: document.getElementById("manualSaleTime"),
+    manualSaleSubmit: document.getElementById("manualSaleSubmit"),
     logoutButton: document.getElementById("logoutButton")
   };
 
@@ -161,6 +173,18 @@
         alert(error.message);
       }
     });
+    if (els.manualSaleForm) {
+      els.manualSaleForm.addEventListener("submit", submitManualSale);
+      if (els.manualSaleCurrency) {
+        els.manualSaleCurrency.addEventListener("change", () => updateCurrencyPlaceholder());
+        updateCurrencyPlaceholder();
+      }
+      if (els.manualSalePhone) {
+        els.manualSalePhone.addEventListener("input", () => {
+          els.manualSalePhone.value = formatPhone(els.manualSalePhone.value);
+        });
+      }
+    }
     document.addEventListener("pointerdown", (event) => {
       if (event.target.closest(".custom-select")) return;
       closeCustomSelects();
@@ -243,6 +267,7 @@
       maybeAutoSyncPush();
     }
     if (Array.isArray(payload.goals)) state.goals = payload.goals.map(normalizeGoal);
+    state.manualSaleOptions = normalizeManualSaleOptions(payload.manualSaleOptions);
     const sales = (payload.transactions || []).map(normalizeSale);
     if (replace) {
       state.transactions = sales;
@@ -348,6 +373,7 @@
     state.displayTransactions = buildDisplayTransactions();
     renderGoals();
     renderMetrics();
+    renderManualSale();
     renderSalesChart();
     renderDailySalesChart();
     if (state.page === "dashboard" && state.animateDashboard) {
@@ -368,6 +394,97 @@
 
   function refreshCustomSelects() {
     document.querySelectorAll("select").forEach(enhanceSelect);
+  }
+
+  function renderManualSale() {
+    if (!els.manualSalePanel || !els.manualSaleProduct) return;
+    const canLaunch = Boolean(state.attendant.lancar_vendas);
+    els.manualSalePanel.classList.toggle("is-hidden", !canLaunch);
+    if (!canLaunch) return;
+    const current = els.manualSaleProduct.value || "";
+    const products = uniqueManualProductOptions();
+    els.manualSaleProduct.innerHTML = products
+      .map((product) => `<option value="${escapeHtml(product.value)}">${escapeHtml(product.label)}</option>`)
+      .join("");
+    const values = products.map((product) => product.value);
+    els.manualSaleProduct.value = values.includes(current) ? current : values[0];
+  }
+
+  async function submitManualSale(event) {
+    event.preventDefault();
+    if (!dataProvider || typeof dataProvider.submitMutation !== "function") {
+      alert("O banco de dados ainda não foi configurado.");
+      return;
+    }
+    const value = parseMoneyValue(els.manualSaleValue.value);
+    if (!value || value <= 0) {
+      alert("Informe um valor de venda válido.");
+      els.manualSaleValue.focus();
+      return;
+    }
+    const now = new Date();
+    const manualDate = els.manualSaleDate ? els.manualSaleDate.value : "";
+    const manualTime = els.manualSaleTime ? els.manualSaleTime.value : "";
+    const saleTimestamp = manualDate
+      ? parseLocalDateTime(manualDate, manualTime || formatTime(now))
+      : now;
+    const payload = new FormData();
+    payload.set("action", "manualSale");
+    payload.set("origem", "Manual");
+    payload.set("moeda", normalizeCurrency(els.manualSaleCurrency ? els.manualSaleCurrency.value : "BRL"));
+    payload.set("valor", String(value).replace(".", ","));
+    payload.set("pagador", els.manualSalePayer.value.trim() || "Cliente manual");
+    payload.set("telefone", els.manualSalePhone ? els.manualSalePhone.value.trim() : "");
+    payload.set("atendente", state.attendant.nome || pageConfig.name || "");
+    payload.set("produto", els.manualSaleProduct ? els.manualSaleProduct.value || "" : "");
+    payload.set("timestamp", saleTimestamp.toISOString());
+    payload.set("transaction_id", `manual-${saleTimestamp.getTime()}-${Math.random().toString(36).slice(2, 8)}`);
+    payload.set("mutation_id", createMutationId("attendant-manual"));
+    setManualSaleLoading(true);
+    try {
+      await dataProvider.submitMutation(payload);
+      els.manualSaleForm.reset();
+      updateCurrencyPlaceholder();
+      await refreshData({ applySelection: true });
+    } catch (error) {
+      console.error(error);
+      alert(error?.message || "Não foi possível adicionar a venda agora.");
+    } finally {
+      setManualSaleLoading(false);
+    }
+  }
+
+  function setManualSaleLoading(isLoading) {
+    if (!els.manualSaleSubmit) return;
+    els.manualSaleSubmit.disabled = isLoading;
+    els.manualSaleSubmit.textContent = isLoading ? "Adicionando..." : "Adicionar venda";
+  }
+
+  function uniqueManualProductOptions() {
+    const products = normalizeManualSaleOptions(state.manualSaleOptions)
+      .map((option) => option.product)
+      .filter(Boolean);
+    const unique = Array.from(new Set(products));
+    return [{ label: "Sem produto", value: "" }].concat(unique.map((product) => ({ label: product, value: product })));
+  }
+
+  function normalizeManualSaleOptions(options) {
+    const rows = Array.isArray(options) ? options : [];
+    return rows.map((option) => {
+      if (option && typeof option === "object") {
+        return {
+          attendant: String(option.atendente || option.attendant || option.nome || option.name || "").trim(),
+          product: String(option.produto || option.product || "").trim()
+        };
+      }
+      return { attendant: "", product: String(option || "").trim() };
+    });
+  }
+
+  function updateCurrencyPlaceholder() {
+    if (!els.manualSaleValue) return;
+    const symbol = currencySymbol(normalizeCurrency(els.manualSaleCurrency ? els.manualSaleCurrency.value : "BRL"));
+    els.manualSaleValue.placeholder = `${symbol} 0,00`;
   }
 
   function enhanceSelect(select) {
@@ -1106,6 +1223,15 @@
     return Number(value || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
   }
 
+  function normalizeCurrency(value) {
+    const normalized = String(value || "BRL").trim().toUpperCase();
+    return ["BRL", "USD", "EUR", "GBP", "CHF"].includes(normalized) ? normalized : "BRL";
+  }
+
+  function currencySymbol(currency) {
+    return { BRL: "R$", USD: "US$", EUR: "€", GBP: "£", CHF: "CHF" }[normalizeCurrency(currency)] || "R$";
+  }
+
   function digitsOnly(value) {
     return String(value || "").replace(/\D/g, "");
   }
@@ -1133,6 +1259,10 @@
 
   function sum(values) {
     return values.reduce((total, value) => total + Number(value || 0), 0);
+  }
+
+  function createMutationId(prefix) {
+    return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
   }
 
   function setText(id, value, options = {}) {

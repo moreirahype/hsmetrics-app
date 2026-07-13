@@ -675,9 +675,10 @@
     const attendant = attendants.find((item) => item.active !== false && !item.deleted_at && String(item.name || "").trim());
     if (!attendant) throw new Error("Seu usuário ainda não foi vinculado a um atendente.");
     const { from, to } = rangeBounds(range);
-    const [transactions, goals] = await Promise.all([
+    const [transactions, goals, products] = await Promise.all([
       rest("transactions", { select: "*", workspace_id: `eq.${context.workspaceId}`, attendant_id: `eq.${attendant.id}`, occurred_at: `gte.${from}`, and: `(occurred_at.lte.${to})`, order: "occurred_at.desc" }),
-      rest("attendant_goals", { select: "*", workspace_id: `eq.${context.workspaceId}`, attendant_id: `eq.${attendant.id}`, order: "created_at.desc" })
+      rest("attendant_goals", { select: "*", workspace_id: `eq.${context.workspaceId}`, attendant_id: `eq.${attendant.id}`, order: "created_at.desc" }),
+      rest("products", { select: "*", workspace_id: `eq.${context.workspaceId}`, active: "eq.true", deleted_at: "is.null", order: "name.asc" })
     ]);
     return {
       attendant: {
@@ -691,6 +692,7 @@
         lancar_vendas: Boolean(attendant.manual_sales_enabled)
       },
       goals: goals.map((item) => ({ slug: attendant.slug, meta_titulo: item.title, meta_valor: Number(item.target_brl || 0), meta_premio: item.prize || "", meta_ativa: Boolean(item.active), meta_inicio: item.started_at })),
+      manualSaleOptions: products.map((item) => ({ atendente: attendant.name, produto: item.name })),
       transactions: transactions.map((row) => {
         const parts = localParts(row.occurred_at);
         return { id: row.id, timestamp: row.occurred_at, data: parts.data, hora: parts.hora, pagador: row.payer_name || "Sem cliente", telefone: row.payer_phone || "", valor: Number(row.gross_amount_brl || 0), comissao_percentual: Number(attendant.commission_percent || 0) };

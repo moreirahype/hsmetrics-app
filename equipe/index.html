@@ -167,6 +167,50 @@
               <button id="nextPage" type="button">Próxima</button>
             </div>
           </article>
+
+          <article class="panel manual-sale-panel is-hidden" id="attendantManualSalePanel">
+            <h1>Lançamentos manuais</h1>
+            <form class="manual-sale-form attendant-manual-sale-form" id="manualSaleForm">
+              <label>
+                <span>Valor</span>
+                <input id="manualSaleValue" type="text" inputmode="decimal" placeholder="R$ 0,00" autocomplete="off">
+              </label>
+              <label>
+                <span>Moeda</span>
+                <select id="manualSaleCurrency" aria-label="Moeda">
+                  <option value="BRL">BRL</option>
+                  <option value="USD">USD</option>
+                  <option value="EUR">EUR</option>
+                  <option value="GBP">GBP</option>
+                  <option value="CHF">CHF</option>
+                </select>
+              </label>
+              <label>
+                <span>Cliente</span>
+                <input id="manualSalePayer" type="text" placeholder="Nome do cliente" autocomplete="off">
+              </label>
+              <label>
+                <span>Telefone</span>
+                <input id="manualSalePhone" type="tel" inputmode="tel" placeholder="(00) 00000-0000" autocomplete="off">
+              </label>
+              <label>
+                <span>Produto</span>
+                <select id="manualSaleProduct" aria-label="Produto">
+                  <option value="">Sem produto</option>
+                </select>
+              </label>
+              <label>
+                <span>Data</span>
+                <input id="manualSaleDate" type="date">
+              </label>
+              <label>
+                <span>Hora</span>
+                <input id="manualSaleTime" type="time">
+              </label>
+              <p class="manual-sale-note">Data e hora são opcionais. Se ficarem vazias, usamos o momento do lançamento.</p>
+              <button id="manualSaleSubmit" type="submit">Adicionar venda</button>
+            </form>
+          </article>
         </section>
 
         <section class="page" id="page-notifications" data-page="notifications">
@@ -202,12 +246,12 @@
       </nav>
     </div>
     <script src="../config.js?v=106"></script>
-    <script src="../supabase-provider.js?v=15"></script>
+    <script src="../supabase-provider.js?v=16"></script>
     <script src="../push-client.js?v=64"></script>
     <script>
       window.HSBI_ATTENDANT_CONFIG = { slug: "attendant", name: "" };
     </script>
-    <script src="../attendant.js?v=76"></script>
+    <script src="../attendant.js?v=77"></script>
   </body>
 </html>
 
