@@ -512,8 +512,19 @@
 
   async function resolveAttendant(workspaceId, nameOrSlug) {
     if (!nameOrSlug || /^sem atendente$/i.test(nameOrSlug)) return null;
-    const rows = await rest("attendants", { select: "*", workspace_id: `eq.${workspaceId}`, or: `(name.ilike.${nameOrSlug},slug.eq.${nameOrSlug})`, limit: 1 });
-    return rows[0] || null;
+    const target = String(nameOrSlug || "").trim();
+    const targetSlug = slugify(target);
+    const targetName = target.toLocaleLowerCase("pt-BR");
+    const rows = await rest("attendants", {
+      select: "*",
+      workspace_id: `eq.${workspaceId}`,
+      order: "created_at.desc"
+    });
+    return rows.find((item) => {
+      const slug = String(item.slug || "").trim();
+      const name = String(item.name || "").trim().toLocaleLowerCase("pt-BR");
+      return slug === target || slug === targetSlug || name === targetName;
+    }) || null;
   }
 
   async function resolveProduct(workspaceId, name) {
@@ -609,12 +620,15 @@
     }
     if (action === "updateAttendant") {
       const original = value(form, "nome_original") || value(form, "slug");
-      const existing = await resolveAttendant(workspaceId, original);
       const name = value(form, "nome").trim();
+      const desiredSlug = value(form, "slug") || slugify(name);
+      const existing = await resolveAttendant(workspaceId, original)
+        || await resolveAttendant(workspaceId, name)
+        || await resolveAttendant(workspaceId, desiredSlug);
       const body = {
         workspace_id: workspaceId,
         name,
-        slug: existing?.slug || value(form, "slug") || slugify(name),
+        slug: existing?.slug || desiredSlug,
         commission_percent: numberValue(form, "comissao_percentual"),
         monthly_fixed_brl: numberValue(form, "salario_fixo_mensal"),
         started_on: value(form, "inicio_trabalho") || null,
@@ -883,7 +897,9 @@
     if (!token) return null;
     const rows = await rpc("accept_attendant_invite", { invite_token: token });
     contextPromise = null;
-    return Array.isArray(rows) ? rows[0] : rows;
+    const accepted = Array.isArray(rows) ? rows[0] : rows;
+    if (accepted?.workspace_id) setActiveWorkspace(accepted.workspace_id);
+    return accepted;
   }
 
   window.HSMData = {

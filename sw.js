@@ -1,4 +1,4 @@
-const CACHE_NAME = "hsmetrics-sales-app-v83";
+const CACHE_NAME = "hsmetrics-sales-app-v84";
 const ASSETS = [
   "./",
   "./index.html",

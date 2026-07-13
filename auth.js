@@ -108,18 +108,19 @@
 
   async function enterApp() {
     const inviteToken = query.get("invite") || localStorage.getItem(inviteStorageKey) || "";
+    let inviteError = null;
     if (inviteToken) {
       // Sempre limpa o token, mesmo se falhar, para não travar logins futuros.
       localStorage.removeItem(inviteStorageKey);
       try {
         await data.acceptAttendantInvite(inviteToken);
       } catch (error) {
-        // Convite inválido/expirado ou dono abrindo o próprio link não deve
-        // impedir o acesso: apenas seguimos para o painel normal.
+        inviteError = error;
         console.warn("Convite não aplicado:", error && error.message);
       }
     }
     const context = await data.getContext();
+    if (inviteToken && inviteError && context.role !== "attendant") throw inviteError;
     const next = query.get("next");
     if (next && next.startsWith("/")) {
       location.replace(next);
@@ -168,6 +169,12 @@
     }
     if (/user already registered|already registered|already exists/i.test(value)) {
       return "Esse e-mail já tem acesso. Clique em “Já tenho senha” e entre normalmente.";
+    }
+    if (/owner_cannot_be_attendant/i.test(value)) {
+      return "Esse link é para a atendente. Abra com o e-mail dela, não com a conta dona do painel.";
+    }
+    if (/invite_invalid_or_expired/i.test(value)) {
+      return "Esse link da equipe expirou ou já foi usado. Gere um novo link no painel.";
     }
     return value || "Não foi possível concluir agora.";
   }
