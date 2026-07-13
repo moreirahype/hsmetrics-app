@@ -1975,6 +1975,8 @@
         closeCustomSelects(custom);
         custom.classList.toggle("is-open", !isOpen);
         custom.querySelector("button").setAttribute("aria-expanded", String(!isOpen));
+        if (!isOpen) positionCustomSelectMenu(custom);
+        else resetCustomSelectMenu(custom);
       });
     }
     custom.classList.toggle("is-disabled", select.disabled);
@@ -2003,12 +2005,41 @@
     });
   }
 
+  function resetCustomSelectMenu(custom) {
+    const menu = custom && custom.querySelector ? custom.querySelector(".custom-select-menu") : null;
+    if (!menu) return;
+    menu.classList.remove("is-floating", "opens-above");
+    menu.removeAttribute("style");
+  }
+
+  function positionCustomSelectMenu(custom) {
+    const button = custom.querySelector(".custom-select-button");
+    const menu = custom.querySelector(".custom-select-menu");
+    if (!button || !menu) return;
+    const rect = button.getBoundingClientRect();
+    const gap = 7;
+    const maxHeight = Math.min(260, Math.max(120, window.innerHeight - 32));
+    const wantedHeight = Math.min(menu.scrollHeight || maxHeight, maxHeight);
+    const spaceBelow = window.innerHeight - rect.bottom - gap - 12;
+    const spaceAbove = rect.top - gap - 12;
+    const openAbove = spaceBelow < wantedHeight && spaceAbove > spaceBelow;
+    const availableHeight = Math.max(96, Math.min(wantedHeight, openAbove ? spaceAbove : spaceBelow));
+    const top = openAbove ? Math.max(12, rect.top - availableHeight - gap) : rect.bottom + gap;
+    menu.classList.toggle("is-floating", true);
+    menu.classList.toggle("opens-above", openAbove);
+    menu.style.left = `${Math.round(rect.left)}px`;
+    menu.style.top = `${Math.round(top)}px`;
+    menu.style.width = `${Math.round(rect.width)}px`;
+    menu.style.maxHeight = `${Math.round(availableHeight)}px`;
+  }
+
   function closeCustomSelects(except) {
     document.querySelectorAll(".custom-select.is-open").forEach((custom) => {
       if (custom === except) return;
       custom.classList.remove("is-open");
       const button = custom.querySelector(".custom-select-button");
       if (button) button.setAttribute("aria-expanded", "false");
+      resetCustomSelectMenu(custom);
     });
   }
 

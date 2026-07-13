@@ -622,6 +622,16 @@ input:hover {
   transition: opacity 170ms ease, transform 170ms cubic-bezier(.2, .75, .2, 1);
 }
 
+.custom-select-menu.is-floating {
+  position: fixed;
+  right: auto;
+  z-index: 1000;
+}
+
+.custom-select-menu.opens-above {
+  transform-origin: bottom center;
+}
+
 .custom-select.is-open .custom-select-menu {
   opacity: 1;
   transform: translateY(0) scale(1);
