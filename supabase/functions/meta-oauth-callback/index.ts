@@ -113,6 +113,22 @@ Deno.serve(async (request) => {
     }, { onConflict: "workspace_id,provider" });
     if (integrationError) throw integrationError;
     await service.from("oauth_states").update({ used_at: new Date().toISOString() }).eq("state", state);
+
+    // Sincroniza os gastos na hora, para não esperar o cron de 15 min: assim o
+    // dashboard já mostra os dados assim que o usuário volta ao app.
+    try {
+      const syncSecret = Deno.env.get("SYNC_SECRET") || "";
+      if (syncSecret) {
+        await fetch(`${supabaseUrl}/functions/v1/meta-insights-sync`, {
+          method: "POST",
+          headers: { Authorization: `Bearer ${syncSecret}`, "Content-Type": "application/json" },
+          body: "{}"
+        });
+      }
+    } catch (syncError) {
+      console.warn("Falha na sincronizacao inicial do Meta", syncError);
+    }
+
     return redirect(appUrl, "connected");
   } catch (error) {
     console.error(error);
