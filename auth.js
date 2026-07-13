@@ -110,17 +110,17 @@
     const inviteToken = query.get("invite") || localStorage.getItem(inviteStorageKey) || "";
     let inviteError = null;
     if (inviteToken) {
-      // Sempre limpa o token, mesmo se falhar, para não travar logins futuros.
-      localStorage.removeItem(inviteStorageKey);
       try {
         await data.acceptAttendantInvite(inviteToken);
+        localStorage.removeItem(inviteStorageKey);
       } catch (error) {
         inviteError = error;
+        localStorage.setItem(inviteStorageKey, inviteToken);
         console.warn("Convite não aplicado:", error && error.message);
       }
     }
+    if (inviteError) throw inviteError;
     const context = await data.getContext();
-    if (inviteToken && inviteError && context.role !== "attendant") throw inviteError;
     const next = query.get("next");
     if (next && next.startsWith("/")) {
       location.replace(next);
@@ -166,6 +166,9 @@
     if (/same password/i.test(value)) return "Escolha uma senha diferente da anterior.";
     if (/email rate limit exceeded/i.test(value)) {
       return "Limite temporário de envio de e-mails atingido. Aguarde alguns minutos e use apenas o link mais recente que chegar.";
+    }
+    if (/new password should be different from the old password|different from the old password/i.test(value)) {
+      return "A nova senha precisa ser diferente da senha anterior.";
     }
     if (/user already registered|already registered|already exists/i.test(value)) {
       return "Esse e-mail já tem acesso. Clique em “Já tenho senha” e entre normalmente.";
