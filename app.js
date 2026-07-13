@@ -879,6 +879,7 @@
       renderNotifications();
       try {
         await syncOwnerPush();
+        showNotificationSavedToast();
       } catch (error) {
         state.notifications = previous;
         saveNotificationPrefs();
